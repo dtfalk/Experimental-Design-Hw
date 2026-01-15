@@ -1,0 +1,149 @@
+ls
+mkdir data
+install.packages(c("tidyverse". "dplyr", "ggplot2"))
+install.packages(c("tidyverse", "dplyr", "ggplot2"))
+renv::restore()
+install.packages(c("tidyverse", "dplyr", "ggplot2"))
+renv::snapshot()
+renv::status()
+knitr::opts_chunk$set(echo = TRUE)
+# Can set your local path to control exactly where this saves. Otherwise, will save in directory with the Rmd file
+# knitr::opts_knit$set(root.dir = "/home/expdes/outputs/")
+library(tidyverse)  # loads many useful packages
+library(dplyr)
+library(ggplot2)
+set.seed(1)  # Ensures reproducible results
+theme_set(theme_minimal())  # My personal preference for less ugly default plots
+# Sources:
+# 1) https://www.digitalocean.com/community/tutorials/r-read-csv-file-into-data-frame
+# 2) https://stackoverflow.com/questions/13110076/function-to-concatenate-paths
+# 3) https://www.datacamp.com/doc/r/merging
+# 4)
+# Import each CSV into a dataframe
+true_recall_data <- read.csv(file.path("class-data", "true_recall_summary.csv"))
+false_recall_data <- read.csv(file.path("class-data", "false_recall_summary.csv"))
+vviq_data <- read.csv(file.path("class-data", "VVIQ_summary.csv"))
+# Merge the three data into a single dataframe called class_data
+class_data <- merge(vviq_data, true_recall_data, false_recall_data, by = "participant")
+# Sources:
+# 1) https://www.digitalocean.com/community/tutorials/r-read-csv-file-into-data-frame
+# 2) https://stackoverflow.com/questions/13110076/function-to-concatenate-paths
+# 3) https://www.datacamp.com/doc/r/merging
+# 4)
+# Import each CSV into a dataframe
+true_recall_data <- read.csv(file.path("class-data", "true_recall_summary.csv"))
+false_recall_data <- read.csv(file.path("class-data", "false_recall_summary.csv"))
+vviq_data <- read.csv(file.path("class-data", "VVIQ_summary.csv"))
+print(true_recall_data)
+print(false_recall_data)
+print(vviq_data)
+# Merge the three data into a single dataframe called class_data
+#class_data <- merge(vviq_data, true_recall_data, false_recall_data, by = "participant")
+View(false_recall_data)
+View(true_recall_data)
+View(vviq_data)
+View(false_recall_data)
+View(true_recall_data)
+View(vviq_data)
+# Sources:
+# 1) https://www.digitalocean.com/community/tutorials/r-read-csv-file-into-data-frame
+# 2) https://stackoverflow.com/questions/13110076/function-to-concatenate-paths
+# 3) https://www.datacamp.com/doc/r/merging
+# 4)
+# Import each CSV into a dataframe
+true_recall_data <- read.csv(file.path("class-data", "true_recall_summary.csv"))
+false_recall_data <- read.csv(file.path("class-data", "false_recall_summary.csv"))
+vviq_data <- read.csv(file.path("class-data", "VVIQ_summary.csv"))
+print(true_recall_data)
+print(false_recall_data)
+print(vviq_data)
+# Merge the three data into a single dataframe called class_data
+class_data <- merge(data vviq_data, true_recall_data, false_recall_data)
+# Sources:
+# 1) https://www.digitalocean.com/community/tutorials/r-read-csv-file-into-data-frame
+# 2) https://stackoverflow.com/questions/13110076/function-to-concatenate-paths
+# 3) https://www.datacamp.com/doc/r/merging
+# 4)
+# Import each CSV into a dataframe
+true_recall_data <- read.csv(file.path("class-data", "true_recall_summary.csv"))
+false_recall_data <- read.csv(file.path("class-data", "false_recall_summary.csv"))
+vviq_data <- read.csv(file.path("class-data", "VVIQ_summary.csv"))
+print(true_recall_data)
+print(false_recall_data)
+print(vviq_data)
+# Merge the three data into a single dataframe called class_data
+class_data <- merge(vviq_data, true_recall_data, false_recall_data)
+# Sources:
+# 1) https://www.digitalocean.com/community/tutorials/r-read-csv-file-into-data-frame
+# 2) https://stackoverflow.com/questions/13110076/function-to-concatenate-paths
+# 3) https://www.datacamp.com/doc/r/merging
+# 4)
+# Import each CSV into a dataframe
+true_recall_data <- read.csv(file.path("class-data", "true_recall_summary.csv"))
+false_recall_data <- read.csv(file.path("class-data", "false_recall_summary.csv"))
+vviq_data <- read.csv(file.path("class-data", "VVIQ_summary.csv"))
+print(true_recall_data)
+print(false_recall_data)
+print(vviq_data)
+# Merge the three data into a single dataframe called class_data
+class_data <- merge(true_recall_data, false_recall_data, by = "participant")
+priint(class_data)
+# Sources:
+# 1) https://www.digitalocean.com/community/tutorials/r-read-csv-file-into-data-frame
+# 2) https://stackoverflow.com/questions/13110076/function-to-concatenate-paths
+# 3) https://www.datacamp.com/doc/r/merging
+# 4)
+# Import each CSV into a dataframe
+true_recall_data <- read.csv(file.path("class-data", "true_recall_summary.csv"))
+false_recall_data <- read.csv(file.path("class-data", "false_recall_summary.csv"))
+vviq_data <- read.csv(file.path("class-data", "VVIQ_summary.csv"))
+# Merge the three data into a single dataframe called class_data
+class_data <- merge(true_recall_data, false_recall_data, by = "participant")
+View(class_data)
+View(false_recall_data)
+View(vviq_data)
+View(true_recall_data)
+View(class_data)
+View(false_recall_data)
+View(true_recall_data)
+View(vviq_data)
+View(true_recall_data)
+View(class_data)
+View(class_data)
+# Sources:
+# 1) https://www.digitalocean.com/community/tutorials/r-read-csv-file-into-data-frame
+# 2) https://stackoverflow.com/questions/13110076/function-to-concatenate-paths
+# 3) https://www.datacamp.com/doc/r/merging
+# 4)
+# Import each CSV into a dataframe
+true_recall_data <- read.csv(file.path("class-data", "true_recall_summary.csv"))
+false_recall_data <- read.csv(file.path("class-data", "false_recall_summary.csv"))
+vviq_data <- read.csv(file.path("class-data", "VVIQ_summary.csv"))
+# Merge the three data into a single dataframe called class_data
+class_data <- full_join(true_recall_data, false_recall_data)
+View(class_data)
+# Sources:
+# 1) https://www.digitalocean.com/community/tutorials/r-read-csv-file-into-data-frame
+# 2) https://stackoverflow.com/questions/13110076/function-to-concatenate-paths
+# 3) https://www.datacamp.com/doc/r/merging
+# 4)
+# Import each CSV into a dataframe
+true_recall_data <- read.csv(file.path("class-data", "true_recall_summary.csv"))
+false_recall_data <- read.csv(file.path("class-data", "false_recall_summary.csv"))
+vviq_data <- read.csv(file.path("class-data", "VVIQ_summary.csv"))
+# Merge the three data into a single dataframe called class_data
+class_data_recall <- full_join(true_recall_data, false_recall_data)
+class_recall <- full_join(class_data_recall, vviq_data)
+View(class_data)
+# Sources:
+# 1) https://www.digitalocean.com/community/tutorials/r-read-csv-file-into-data-frame
+# 2) https://stackoverflow.com/questions/13110076/function-to-concatenate-paths
+# 3) https://www.datacamp.com/doc/r/merging
+# 4)
+# Import each CSV into a dataframe
+true_recall_data <- read.csv(file.path("class-data", "true_recall_summary.csv"))
+false_recall_data <- read.csv(file.path("class-data", "false_recall_summary.csv"))
+vviq_data <- read.csv(file.path("class-data", "VVIQ_summary.csv"))
+# Merge the three data into a single dataframe called class_data
+class_data_recall <- full_join(true_recall_data, false_recall_data)
+class_data <- full_join(class_data_recall, vviq_data)
