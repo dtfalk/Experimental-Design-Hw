@@ -388,14 +388,18 @@ find_outlier = function(num_list){
   
   # Iterate and construct the outlier boolean list
   for (data_point in num_list) {
+    
+    # If point falls outside of non-outlier range, then set value to TRUE
     if (data_point < lower_bound | data_point > upper_bound) {
       results_list <- c(results_list, TRUE)
     }
+    # Otherwise, participant is not an outlier so set to FALSE
     else {
       results_list <- c(results_list, FALSE)
     }
   }
   
+  # Return the list
   return(results_list)
 }
 ```
@@ -403,13 +407,39 @@ find_outlier = function(num_list){
    6a. Apply the function to **false_recall_proportion**, and then list the rows (participants) who were identified as outliers. These are participants who had many more (or fewer) false memories than expected—they are particularly sensitive to the DRM effect (4 points).  
 
 ```{r 6a}
+# Sources
+  # 1) https://codesignal.com/learn/courses/data-manipulation-in-r/lessons/exploring-data-frames-with-boolean-selection-in-r
 
+# Extract the false recall column
+false_recall_real <- participant_level_data$false_recall_proportion
+
+# Get boolean list for which participants are outliers
+false_recall_outliers_mask <- find_outlier(false_recall_real)
+
+# Subset the participant df to get which ones are outliers
+false_recall_outliers <- participant_level_data[unlist(false_recall_outliers_mask), ]
+
+# Print the data
+print(false_recall_outliers)
 ```
   
   6b. Apply the function to **vviq**, and then list the rows (participants) who were identified as outliers. These may be participants with aphantasia (a lack of visual imagery) or hyperphantasia (incredibly strong imagery)! (4 points).  
 
 ```{r 6b}
+# Sources
+  # 1) https://codesignal.com/learn/courses/data-manipulation-in-r/lessons/exploring-data-frames-with-boolean-selection-in-r
 
+# Extract the false recall column
+vviq_real <- participant_level_data$VVIQ_score
+
+# Get boolean list for which participants are outliers
+vviq_outliers_mask <- find_outlier(vviq_real)
+
+# Subset the participant df to get which ones are outliers
+vviq_outliers <- participant_level_data[unlist(vviq_outliers_mask), ]
+
+# Print the data
+print(vviq_outliers)
 ```
 
 # Part 4: Plotting the data
@@ -420,7 +450,195 @@ find_outlier = function(num_list){
     c. a **bar graph** of the true recall proportion, with one bar for each of the two broader strategy conditions (verbal and visual). **include error bars indicating standard error** (2 point per plot).  
   
 ```{r 7}
+# Sources
+  # 1) https://www.datamentor.io/r-programming/histogram
+  # 2) https://www.datacamp.com/doc/r/scatterplot-in-r
+  # 3) https://r-graph-gallery.com/4-barplot-with-error-bar.html
 
+# Get true recall proportion data for each data set
+true_recall_graph_data_a <- toy_set_a$true_recall_proportion
+true_recall_graph_data_b <- toy_set_b$true_recall_proportion
+true_recall_graph_data_real <- participant_level_data$true_recall_proportion
+
+
+# HISTOGRAMS
+# ================================
+
+# Toy Data A
+# -------------------
+hist(true_recall_graph_data_a,
+     main = "Frequency of True Recall Proportions (Toy Set A)", 
+     xlab = "True Recall Proportion", 
+     xlim = c(0,1),
+     col  = "red",
+     )
+# -------------------
+
+# Toy Data B
+# -------------------
+hist(true_recall_graph_data_b,
+     main = "Frequency of True Recall Proportions (Toy Set B)", 
+     xlab = "True Recall Proportion", 
+     xlim = c(0,1),
+     col  = "blue",
+     ) 
+# -------------------
+
+# Actual Class Data
+# -------------------
+hist(true_recall_graph_data_real,
+     main = "Frequency of True Recall Proportions (Actual Data)", 
+     xlab = "True Recall Proportion", 
+     xlim = c(0,1),
+     col  = "orange",
+    )
+# -------------------
+# ================================
+
+# SCATTERPLOTS
+# ================================
+
+# Toy Data A
+# -------------------
+x_vals_a <- ifelse(toy_set_a$encoding_modality == "verbal", 0.9, 1.1)
+plot(
+     x_vals_a,
+     toy_set_a$true_recall_proportion,
+     col = ifelse(toy_set_a$encoding_modality == "verbal", "orange", "purple"),
+     pch = 16,
+     xaxt = "n",
+     xlab = "Encoding Modality",
+     ylab = "True Recall Proportion",
+     xlim = c(0.8, 1.2),
+     ylim = c(0, 1),
+     main = "True Recall Proportion by Modality (Toy Set A)"
+)
+axis(1, at = c(0.9, 1.1), labels = c("Verbal", "Visual"))
+# -------------------
+
+# Toy Data B
+# -------------------
+x_vals_b <- ifelse(toy_set_b$encoding_modality == "verbal", 0.9, 1.1)
+plot(
+     x_vals_b,
+     toy_set_b$true_recall_proportion,
+     col = ifelse(toy_set_b$encoding_modality == "verbal", "orange", "purple"),
+     pch = 16,
+     xaxt = "n",
+     xlab = "Encoding Modality",
+     ylab = "True Recall Proportion",
+     xlim = c(0.8, 1.2),
+     ylim = c(0, 1),
+     main = "True Recall Proportion by Modality (Toy Set B)"
+)
+axis(1, at = c(0.9, 1.1), labels = c("Verbal", "Visual"))
+# -------------------
+
+# Actual Class Data
+# -------------------
+x_vals_real <- ifelse(participant_level_data$encoding_modality == "verbal", 0.9, 1.1)
+plot(
+     x_vals_real,
+     participant_level_data$true_recall_proportion,
+     col = ifelse(participant_level_data$encoding_modality == "verbal", "orange", "purple"),
+     pch = 16,
+     xaxt = "n",
+     xlab = "Encoding Modality",
+     ylab = "True Recall Proportion",
+     xlim = c(0.8, 1.2),
+     ylim = c(0, 1),
+     main = "True Recall Proportion by Modality (Actual Data)"
+)
+axis(1, at = c(0.9, 1.1), labels = c("Verbal", "Visual"))
+# -------------------
+# ================================
+
+# BAR GRAPHS
+# ================================
+
+# Toy Data A
+# -------------------
+# Combine group means and standard errors
+means_a <- c(verbal_mean_a, visual_mean_a)
+ses_a   <- c(verbal_se_a, visual_se_a)
+
+# Create bar plot
+bar_positions_a <- barplot(
+  means_a,
+  names.arg = c("Verbal", "Visual"),
+  ylim = c(0, 1),
+  col = c("orange", "purple"),
+  ylab = "Mean True Recall Proportion",
+  main = "True Recall Proportion by Modality (Toy Set A)"
+)
+
+# Add error bars
+arrows(
+  x0 = bar_positions_a,
+  y0 = means_a - ses_a,
+  x1 = bar_positions_a,
+  y1 = means_a + ses_a,
+  angle = 90,
+  code = 3,
+  length = 0.05
+)
+# -------------------
+
+# Toy Data B
+# -------------------
+# Combine group means and standard errors
+means_b <- c(verbal_mean_b, visual_mean_b)
+ses_b   <- c(verbal_se_b, visual_se_b)
+
+# Create the bar plot
+bar_positions_b <- barplot(
+  means_b,
+  names.arg = c("Verbal", "Visual"),
+  ylim = c(0, 1),
+  col = c("orange", "purple"),
+  ylab = "Mean True Recall Proportion",
+  main = "True Recall Proportion by Modality (Toy Set B)"
+)
+
+# Add standard error bars
+arrows(
+  x0 = bar_positions_b,
+  y0 = means_b - ses_b,
+  x1 = bar_positions_b,
+  y1 = means_b + ses_b,
+  angle = 90,
+  code = 3,
+  length = 0.05
+)
+# -------------------
+
+# Actual Class Data
+# -------------------
+# Combine group means and standard errors
+means_real <- c(verbal_mean_real, visual_mean_real)
+ses_real   <- c(verbal_se_real, visual_se_real)
+
+# Create the bar plot
+bar_positions_real <- barplot(
+  means_real,
+  names.arg = c("Verbal", "Visual"),
+  ylim = c(0, 1),
+  col = c("orange", "purple"),
+  ylab = "Mean True Recall Proportion",
+  main = "True Recall Proportion by Modality (Actual Data)"
+)
+
+# Add standard error bars
+arrows(
+  x0 = bar_positions_real,
+  y0 = means_real - ses_real,
+  x1 = bar_positions_real,
+  y1 = means_real + ses_real,
+  angle = 90,
+  code = 3,
+  length = 0.05
+)
+# -------------------
 ```
 
   8. **Describe:** Eye-balling the real data graphs and comparing them to the graphs for your toy datasets, would you guess there is a difference in true recall proportion for these two sets of participants? Why?  
