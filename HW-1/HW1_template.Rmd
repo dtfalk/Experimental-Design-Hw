@@ -644,7 +644,7 @@ arrows(
   8. **Describe:** Eye-balling the real data graphs and comparing them to the graphs for your toy datasets, would you guess there is a difference in true recall proportion for these two sets of participants? Why?  
     
   Write your answers below:  
-
+    By eyeballing the data I would guess that there is not a difference in true recall performance for this set of participants. Looking at the scatterplot and bar graphs, the actual data graphs looks much more similar to toy set b (the no difference dataset) than it does to toy set a graphs (the difference dataset). For the scatterplot and pargraph this is quite clear. For the histogram, it is difficult to tell which one looks more similar. I would say that the actual data *might* look more like toy set a, but it is very unclear. So in the final analysis two of the graphs really support the idea that the actual data is most similar to toy data set b (no difference) and one graph is inconclusive but leans towards toy data set a (there is a difference). As a result, I would guess that there is no difference in true recall proportion for the actual participants.
 
 
   
