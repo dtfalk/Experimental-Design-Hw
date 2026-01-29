@@ -1,0 +1,322 @@
+
+---
+title: "Homework 2"
+author: "David Falk"
+date: "`r Sys.time()`"
+output: 
+  html_document: 
+    toc: true
+---
+<!---
+In order to check that all the necessary packages are installed, Click the File > New File > R Markdown button and keep all of the options as is. Save the document somewhere, and, while that new document is open, click the knit button. If a window with some plots shows up, everything is installed correctly. If RStudio prompts you to install any packages, you should install them.
+-->
+
+<!---
+Please save this file as Homework2_lastname_firstname.Rmd
+
+Be sure to update the author field in the block above.
+
+While you are working on your homework, you can use the green arrows to run a "chunk" of code. In order to produce the final document, use the knit button. You will turn in both the Rmd file and the knitted html file, which will appear next to wherever you saved the Rmd file if there are no errors.
+
+Beware, if you run chunks out of order or reuse variable names your code may produce different results when it is run again from top to bottom. Before you knit your document, it is a good idea to run all the chunks in order from top to bottom in a clean environment. Use the broom button in the environment pane to clear your variables and click the Session > Restart R and Run All Chunks.
+
+If you ever want to reference the documentation about a function, go to the console below and type ?function_name.
+-->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+# Can set your local path to control exactly where this saves. Otherwise, will save in directory with the Rmd file
+# knitr::opts_knit$set(root.dir = "/home/expdes/outputs/")  
+
+library(tidyverse)  #hub of many packages
+set.seed(1)  #reproducible results
+theme_set(theme_minimal())  #nice-looking plots
+
+```
+
+# Part 0: Importing Data  
+Import `participant_level_data` from Canvas.  
+```{r}
+participant_level_data <- read.csv(file.path("data", "participant_level_data.csv"))
+```
+
+   
+# Part 1: Normality and t-tests  
+Now we can test out one of our main questions: Does encoding strategy impact memory performance?  
+  
+## Question 1:  
+Plot one histogram each of `true_recall_proportion` and `false_recall_proportion` across all participants.
+```{r}
+# Sources
+#   1) https://www.datamentor.io/r-programming/histogram
+
+# Get the recall proportions
+true_recall_data <- participant_level_data$true_recall_proportion
+false_recall_data <- participant_level_data$false_recall_proportion
+
+
+# HISTOGRAMS
+# ================================
+
+# True Recall Proportion
+# -------------------
+hist(true_recall_data,
+     main = "True Recall Proportions Across All Participants", 
+     xlab = "True Recall Proportion", 
+     ylab = "Count",
+     xlim = c(0,1),
+     ylim = c(0,8),
+     col  = "darkolivegreen4",
+     )
+# -------------------
+
+# False Recall Proportion
+# -------------------
+hist(false_recall_data,
+     main = "False Recall Proportions Across All Participants", 
+     xlab = "True Recall Proportion", 
+     ylab = "Count",
+     xlim = c(0,1),
+     ylim = c(0,8),
+     col  = "brown1",
+     ) 
+```
+
+Briefly discuss: What shape do these distributions take? Are there any particularly noticeable features about these distributions?    
+*Please write your answer to the open-response question in the lines below*  
+The histogram for the true recall proportions appears normal. There may be too little data to tell but it appears to have a large, normal-looking bump around 0.5 to 0.7 and then the graph tapers off on both the lefts and the right. On the left tail there is a potential outlier around 0.1, but it is hard to say if this is of signifigance just by eyeballing the graph.
+
+The historgram for the false recall proportions appears to be either uniform or heavier closer to 0 and tapering off towards thr right. It is hard to tell which it would be without more data or a more advanced statistical analysis (Kolomgrov-Smirnov?). If we had more data then I would be interested in seeing whether that dip around 0.4-0.7 fills in and everything evens out or whether the areas around 0.0-0.4 proceed to fill out.
+
+In summary, the two distributions appear to have different shapes. True recall looks more normal and false recall looks either uniform or skewed in some way.
+
+  
+## Question 2:  
+Write an R function (called "**ttest**" ← function(samp1,samp2)) that calculates the t-statistic for an **independent samples t-test** from scratch. Make sure that if the mean of sample 1 is greater than the mean of sample 2, the t statistic is positive (and negative if the mean of sample 1 is less than the mean of sample 2). Show how you would also calculate these values using a built-in R function.
+```{r}
+# Sources
+#   1) https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/t.test
+
+# Handmade function
+ttest <- function(samp1, samp2) {
+  
+  # Get n for each sample
+  n_1 <- length(samp1)
+  n_2 <- length(samp2)
+  
+  # Get mean of each sample
+  mean_1 <- mean(samp1)
+  mean_2 <- mean(samp2)
+  
+  # Get standard deviation of each sample
+  std_1 <- sd(samp1)
+  std_2 <- sd(samp2)
+  
+  # Compute Pooled Standard Deviation
+  pooled_std_numerator   <- ((n_1 - 1) * (std_1 ** 2)) + ((n_2 - 1) * (std_2 ** 2)) 
+  pooled_std_denominator <- n_1 + n_2 - 2
+  pooled_std <- sqrt(pooled_std_numerator / pooled_std_denominator)
+  
+  # Compute the t-statistic
+  t_stat_numerator   <- mean_1 - mean_2 
+  t_stat_denominator <- pooled_std * sqrt((1 / n_1) + (1 / n_2))
+  t_statistic <- t_stat_numerator / t_stat_denominator
+  
+  return(t_statistic)
+}
+
+# Example of how to use this with built in R function
+# t_statistic <- t.test(samp1, samp2, var.equal = TRUE)
+```
+
+a. Use your “**ttest**” function to compare `true_recall_proportion` for verbal versus visual participants. Output the resulting t-statistic.  
+```{r}
+
+```
+
+b. Use your “**ttest**” function to compare `true_recall_proportion` for shallow versus deep strategy participants. Output the resulting t-statistic.  
+```{r}
+
+```
+
+Show how you would also calculate it using a built-in R function.   
+```{r}
+
+#Calculations with built-in R functions should go here
+
+```
+
+
+  
+## Question 3:  
+Write an R function called "**ttest_paired**" that calculates the t-statistic for a **paired samples t-test** from scratch. Make sure that if the mean of sample 1 is greater than the mean of sample 2, the t-statistic is positive.  
+```{r}
+
+# ttest_paired <- function(samp1, samp2) {
+#
+# }
+
+```
+
+Use your "**ttest_paired**" function to compare `true_recall_proportion` for verbal versus visual participants. Output the resulting t-statistic. For this question, only use the first 12 participants in each condition (remove ids 862003, TgA3wccPQM9Has7)  
+```{r}
+
+```
+
+Use your "**ttest_paired**" function to compare `true_recall_proportion` for shallow versus deep strategy participants. Output the resulting t-statistic. For this question, only use the first 11 participants in each condition (remove ids 662545, 665565, 697823, 862003)  
+```{r}
+
+```
+
+Show how you would also calculate it using a built-in R function.   
+```{r}
+
+#Calculations with built-in R functions should go here
+
+```
+
+
+  
+## Question 4: Write up  
+a: Briefly discuss which is the more appropriate test to use, and why.   
+*Please write your answer to the question in the lines below*  
+  
+ 
+  
+b: Get the p-value for that test using the R function `pt()`. Make sure to output this value.  
+```{r}
+
+```
+  
+Describe – what is the null hypothesis and the alternative hypothesis for each test, and what does the p-value tell us about either of these?  
+*Please write your answer to the question in the lines below*  
+  
+ 
+  
+c: Write up the t-test results for that test in the format of a sentence for a research paper.  
+*Please write your answer to the question in the lines below*  
+
+  
+# Part 2: Effect size  
+  
+## Question 5:  
+Write a function (called "**cohend**" <- function(samp1, samp2)) to calculate the effect size (Cohen’s d) from scratch (taking the two samples as the input).  
+```{r}
+# cohend <- function(samp1, samp2) {
+#
+# }
+```
+
+What is the Cohen’s d for the deep versus shallow strategy comparison? Output the value for Cohen’s d.  
+```{r}
+#Calculate Cohen's d using your function here
+
+```
+
+  
+## Question 6:  
+Re-write up the t-test results including effect size. Is this a small, medium, or large effect?  
+*Please write your response in the lines below*  
+
+  
+## Question 7:  
+Using `power.t.test` in R, calculate the optimal sample size using the effect size from these data and a desired power level of 90%. Save the results of the power calculation to a variable called **power_res**.
+```{r}
+
+```
+  
+  
+  
+# Part 3: Permutation tests  
+
+Let’s try testing out a different question – does strategy type impact the rate of false memories? It may make more sense to use a permutation test here because false alarm rate is not normally distributed.  
+
+Code a **permutation** test to compare `false_recall_proportion` for shallow versus deep strategy participants using the following parameters. As part of this, you should write a permutation function (called permtest <- function(samp1, samp2)) that computes a single permutation. It takes as input a dataframe, runs a single permutation, and outputs a dataframe with two columns (“mean_falsealarms_shallow” and “mean_falsealarms_deep”) and one row. 
+
+  
+## Question 8:  
+a: Your permutations will be randomly shuffling / swapping condition membership (deep / shallow strategy usage).
+```{r}
+
+```
+
+  
+b: Use the permutation function to conduct 1000 permutations. Set the seed to 2026 before you start your permutations. Save the results in a dataframe called “**permutations**” with 1000 rows, and 2 columns called “**mean_falsealarms_shallow**” and “**mean_falsealarms_deep**”. Output the top 10 rows of the “**permutations**” dataframe.  
+```{r}
+
+```
+
+  
+c: Plot a **histogram** of the 1000 mean differences between the shuffled groups, and
+show where the sample mean lies with a vertical line.  
+```{r}
+  
+```
+
+  
+d: Calculate the p-value of the two-tailed permutation test. Save this p-value in a variable called “**p_val_permutation**” and output this value.  
+```{r}
+
+```
+
+  
+e:  Write up the permutation results in the form of a sentence for a research paper.  
+*Please write your sentence in the lines below*
+ 
+  
+
+# Part 4: Bootstrapping confidence intervals  
+  
+## Question 9:  
+Calculate the **confidence interval** around the false recall proportion for deep versus shallow strategy individuals, using the formula mentioned in class. Place the confidence intervals into a dataframe called `Cis` with one row and the columns “ci_lower_shallow”, “ci_upper_shallow”, “ci_lower_deep”, “ci_upper_deep”.
+
+```{r}
+# Cis  = ...
+
+```
+
+
+## Question 10:  
+We will now calculate confidence intervals using **bootstrapping** – this method is particularly useful for calculating statistics that don’t have an easy confidence interval formula! (Hint: The R Demo on Permutations will be helpful here when coding.)
+  
+a: Take a bootstrap sample from the data, of the same sample size, for "false recall proportion" for shallow strategy and deep strategy individuals separately. Calculate the sample means.   
+```{r}
+#Take your bootstrap sample and calculate your sample mean here
+
+```
+
+  
+  
+b: Repeat 10.a for 1,000 iterations. Set the seed to 2026 before you start your permutations. Create a dataframe with your bootstraps called “**bootstraps**” and the columns “mean_falsealarms_shallow” and “mean_falsealarms_deep”. Output the first 10 rows of the “**bootstraps**” dataframe.  
+```{r}
+
+```
+
+  
+c: Plot two overlaid histograms of the bootstrap sample means for shallow strategy participants, and the bootstrap sample means for deep strategy participants.   
+```{r}
+#Plot your histograms here
+
+
+```
+  
+  
+d: Calculate the bootstrapped 95% confidence intervals for shallow and deep strategy participants. (Hint: These are the values at the bottom and top 2.5% of your distributions.) Place the confidence intervals into a dataframe called “**Cis_boot**” with one row and the columns “ci_lower_shallow”, “ci_upper_shallow”, “ci_lower_deep”, “ci_upper_deep”. Output the “**Cis_boot**” dataframe.  
+```{r}
+
+```
+
+  
+## Question 11:  
+Output the data frames with your originally calculated confidence intervals (“**Cis**” from Q9) and your bootstrapped confidence intervals (“**Cis_boot**” from Q10).  
+```{r}
+
+```
+
+How do the originally (parametric) calculated and bootstrapped confidence intervals compare?  
+*Please write your response in the lines below*  
+  
+What does your bootstrapped confidence interval imply about the difference (or similarity) in false memories based on depth of encoding strategy?  
+*Please write your response in the lines below*  
+  
+
