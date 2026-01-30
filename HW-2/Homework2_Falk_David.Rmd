@@ -96,6 +96,7 @@ Write an R function (called "**ttest**" ← function(samp1,samp2)) that calculat
 ```{r}
 # Sources
 #   1) https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/t.test
+#   2) https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/unname
 
 # Handmade function
 ttest <- function(samp1, samp2) {
@@ -124,25 +125,48 @@ ttest <- function(samp1, samp2) {
   
   return(t_statistic)
 }
-
-# Example of how to use this with built in R function
-# t_statistic <- t.test(samp1, samp2, var.equal = TRUE)
 ```
 
 a. Use your “**ttest**” function to compare `true_recall_proportion` for verbal versus visual participants. Output the resulting t-statistic.  
 ```{r}
 
+# Get verbal and visual participant data
+verbal_true_recall_data <- participant_level_data[participant_level_data$encoding_modality == "verbal",]$true_recall_proportion
+
+visual_true_recall_data <- participant_level_data[participant_level_data$encoding_modality == "visual",]$true_recall_proportion
+
+# Calculate t statistic
+indep_t_stat_modality <- ttest(verbal_true_recall_data, visual_true_recall_data)
+
+# Print the result
+cat(sprintf("(Encoding Modality) Handwritten Indep. Samp. T-Statistic: %.6f", indep_t_stat_modality))
 ```
 
 b. Use your “**ttest**” function to compare `true_recall_proportion` for shallow versus deep strategy participants. Output the resulting t-statistic.  
 ```{r}
 
+# Get shallow and deep participant data
+shallow_true_recall_data <- participant_level_data[participant_level_data$encoding_depth == "shallow",]$true_recall_proportion
+
+deep_true_recall_data <- participant_level_data[participant_level_data$encoding_depth == "deep",]$true_recall_proportion
+
+# Calculate t statistic
+indep_t_stat_depth <- ttest(shallow_true_recall_data, deep_true_recall_data)
+
+# Print the result
+cat(sprintf("(Encoding Depth) Handwritten Indep. Samp. T-Statistic: %.6f", indep_t_stat_depth))
 ```
 
 Show how you would also calculate it using a built-in R function.   
 ```{r}
 
-#Calculations with built-in R functions should go here
+# Encoding modality via built-in function
+indep_t_stat_modality_builtin <- unname(t.test(verbal_true_recall_data, visual_true_recall_data, var.equal = TRUE)$statistic)
+cat(sprintf("(Encoding Modality) Built-in Indep. Samp. T-Statistic:  %.6f\n", indep_t_stat_modality_builtin))
+
+# Encoding depth via built-in function
+indep_t_stat_depth_builtin <- unname(t.test(shallow_true_recall_data, deep_true_recall_data, var.equal = TRUE)$statistic)
+cat(sprintf("(Encoding Depth)    Built-in Indep. Samp. T-Statistic: %.6f", indep_t_stat_depth_builtin))
 
 ```
 
@@ -151,28 +175,91 @@ Show how you would also calculate it using a built-in R function.
 ## Question 3:  
 Write an R function called "**ttest_paired**" that calculates the t-statistic for a **paired samples t-test** from scratch. Make sure that if the mean of sample 1 is greater than the mean of sample 2, the t-statistic is positive.  
 ```{r}
+# Sources
+#   1) https://datascienceparichay.com/article/subtract-two-vectors-in-r/
 
-# ttest_paired <- function(samp1, samp2) {
-#
-# }
-
+# Handmade paired t test function
+ttest_paired <- function(samp1, samp2) {
+  
+  # Get a vector representing paired differences
+  differences <- samp1 - samp2
+  
+  # Get mean, std and n of the paired differences
+  mean_diff <- mean(differences)
+  std_diff <- sd(differences)
+  n <- length(differences)
+  
+  # Calculate t statistic
+  t_statistic <- mean_diff / (std_diff / sqrt(n))
+  
+  return(t_statistic)
+}
 ```
 
 Use your "**ttest_paired**" function to compare `true_recall_proportion` for verbal versus visual participants. Output the resulting t-statistic. For this question, only use the first 12 participants in each condition (remove ids 862003, TgA3wccPQM9Has7)  
 ```{r}
+# Ids to filter out in the modality case
+modality_ids_to_filter <- c("862003", "TgA3wccPQM9Has7")
 
+# Filter out specified IDs
+no_ids_modality <- participant_level_data[!(participant_level_data$participant %in% modality_ids_to_filter),]
+
+# Get verbal vector
+verbal_true_recall_data <-
+  no_ids_modality$true_recall_proportion[
+    no_ids_modality$encoding_modality == "verbal"]
+
+# Get visual vector
+visual_true_recall_data <-
+  no_ids_modality$true_recall_proportion[
+    no_ids_modality$encoding_modality == "visual"]
+
+# Get paired T-statistic
+paired_t_stat_modality_builtin <- ttest_paired(verbal_true_recall_data, visual_true_recall_data)
+
+# Print the result
+cat(sprintf("(Encoding Modality) Handwritten Paired Samples T-Statistic: %.6f", paired_t_stat_modality_builtin))
 ```
 
 Use your "**ttest_paired**" function to compare `true_recall_proportion` for shallow versus deep strategy participants. Output the resulting t-statistic. For this question, only use the first 11 participants in each condition (remove ids 662545, 665565, 697823, 862003)  
 ```{r}
+# Ids to filter out in the modality case
+depth_ids_to_filter <- c("662545", "665565", "697823", "862003")
 
+# Filter out specified IDs
+no_ids_depth <- participant_level_data[!(participant_level_data$participant %in% depth_ids_to_filter),]
+
+# Get verbal vector
+shallow_true_recall_data <-
+  no_ids_depth$true_recall_proportion[
+    no_ids_depth$encoding_depth == "shallow"]
+
+# Get visual vector
+deep_true_recall_data <-
+  no_ids_depth$true_recall_proportion[
+    no_ids_depth$encoding_depth == "deep"]
+
+# Get paired T-statistic
+paired_t_stat_modality_builtin <- ttest_paired(shallow_true_recall_data, deep_true_recall_data)
+
+# Print the result
+cat(sprintf("(Encoding Depth) Handwritten Paired Samples T-Statistic: %.6f", paired_t_stat_modality_builtin))
 ```
 
 Show how you would also calculate it using a built-in R function.   
 ```{r}
 
 #Calculations with built-in R functions should go here
+# Sources
+#   1) https://www.statology.org/paired-samples-t-test-r/
 
+# Encoding modality via built-in function
+paired_t_stat_modality_builtin <- unname(t.test(verbal_true_recall_data, visual_true_recall_data, paired = TRUE)$statistic)
+cat(sprintf("(Encoding Modality) Built-in Paired Samp. T-Statistic:  %.6f\n", paired_t_stat_modality_builtin))
+
+# Encoding depth via built-in function
+paired_t_stat_depth_builtin <- unname(t.test(shallow_true_recall_data, deep_true_recall_data, paired = TRUE)$statistic)
+cat(sprintf("(Encoding Depth)    Built-in Paired Samp. T-Statistic: %.6f", paired_t_stat_depth_builtin))
 ```
 
 
@@ -180,17 +267,38 @@ Show how you would also calculate it using a built-in R function.
 ## Question 4: Write up  
 a: Briefly discuss which is the more appropriate test to use, and why.   
 *Please write your answer to the question in the lines below*  
-  
- 
+The independent samples is more appropriate for this situation. 
+
+The independent samples test is appropriate for comparing different groups. For example "visual" vs "verbal" encoding modality or "deep" vs "shallow" encoding depth. 
+
+The paired samples test is inappropriate here because paired tests assume that there is paired data. Since each subject has EITHER a visual or verbal encoding modality and EITHER a deep or verbal encoding modality there is no meaningful way to compute paired differences. There is no paired data.
+
   
 b: Get the p-value for that test using the R function `pt()`. Make sure to output this value.  
 ```{r}
+# Sources
+#   1) https://www.statology.org/working-with-the-student-t-distribution-in-r-dt-qt-pt-rt/
 
+df_modality <- length(verbal_true_recall_data) + length(visual_true_recall_data) - 2
+p_value_modality <- pt(indep_t_stat_modality, df_modality)
+
+df_depth <- length(shallow_true_recall_data) + length(deep_true_recall_data) - 2
+p_value_depth <- pt(indep_t_stat_depth, df_depth)
+
+cat(sprintf("(Encoding Modality) P Value: %.6f\n", p_value_modality))
+cat(sprintf("(Encoding Depth)    P Value: %.6f", p_value_depth))
 ```
   
 Describe – what is the null hypothesis and the alternative hypothesis for each test, and what does the p-value tell us about either of these?  
-*Please write your answer to the question in the lines below*  
-  
+*Please write your answer to the question in the lines below* 
+Modality
+--------------------------
+Null Hypothesis: There is no difference in true recall performance between the visual and verbal groups.
+Alternative Hypothesis:
+
+Depth
+--------------------------
+Null Hypothesis (Depth): There is no difference in true recall performance between the shallow and deep groups.
  
   
 c: Write up the t-test results for that test in the format of a sentence for a research paper.  
