@@ -249,7 +249,7 @@ cat(sprintf("(Encoding Depth) Handwritten Paired Samples T-Statistic: %.6f", pai
 Show how you would also calculate it using a built-in R function.   
 ```{r}
 
-#Calculations with built-in R functions should go here
+# Calculations with built-in R functions should go here
 # Sources
 #   1) https://www.statology.org/paired-samples-t-test-r/
 
@@ -310,27 +310,71 @@ c: Write up the t-test results for that test in the format of a sentence for a r
 ## Question 5:  
 Write a function (called "**cohend**" <- function(samp1, samp2)) to calculate the effect size (Cohen’s d) from scratch (taking the two samples as the input).  
 ```{r}
-# cohend <- function(samp1, samp2) {
-#
-# }
+# Sources
+#   1) https://www.statisticshowto.com/probability-and-statistics/statistics-definitions/cohens-d/
+#   2) https://www.statology.org/pooled-standard-deviation/
+
+cohend <- function(samp1, samp2) {
+  
+  # Get mean for each sample
+  mean1 <- mean(samp1)
+  mean2 <- mean(samp2)
+  
+  # Get pooled standard deviation
+  pooled_std_numerator <- ((length(samp1) - 1) * sd(samp1)^2) + ((length(samp2) - 1) * sd(samp2)^2)
+  pooled_std_denominator <- length(samp1) + length(samp2) - 2
+  pooled_std <- sqrt(pooled_std_numerator / pooled_std_denominator)
+  
+  # calculate cohen's d and return
+  cohens_d <- (mean1 - mean2) / pooled_std
+  return(cohens_d)
+}
 ```
 
 What is the Cohen’s d for the deep versus shallow strategy comparison? Output the value for Cohen’s d.  
 ```{r}
-#Calculate Cohen's d using your function here
+# Calculate Cohen's d using your function here
+
+# Get deep participants' true recall data
+deep_true_recall_data <-
+  participant_level_data$true_recall_proportion[
+    participant_level_data$encoding_depth == "deep"]
+
+# Get shallow participants' true recall data
+shallow_true_recall_data <-
+  participant_level_data$true_recall_proportion[
+    participant_level_data$encoding_depth == "shallow"]
+
+# Calculate Cohen's d and print 
+cohens_d_encoding_strategy <- cohend(deep_true_recall_data, shallow_true_recall_data)
+cat(sprintf("Cohen's d for deep (samp1) vs shallow (samp2) encoding strategy: %.6f\n", cohens_d_encoding_strategy))
 
 ```
 
   
 ## Question 6:  
 Re-write up the t-test results including effect size. Is this a small, medium, or large effect?  
-*Please write your response in the lines below*  
 
   
 ## Question 7:  
 Using `power.t.test` in R, calculate the optimal sample size using the effect size from these data and a desired power level of 90%. Save the results of the power calculation to a variable called **power_res**.
 ```{r}
+# Sources:
+# 1) https://www.rdocumentation.org/packages/stats/versions/3.6.2/topics/power.t.test
 
+# Calculate power_res
+# (Maybe I am wrong but we can just re-scale pooled std
+# to 1 and use Cohen's d directly?)
+power_res <- power.t.test(
+    n = NULL,
+    delta = cohens_d_encoding_strategy,
+    sd = 1,
+    sig.level = 0.05,
+    power = 0.90,
+    type = "two.sample")$n
+
+# Print result
+cat(sprintf("power_res for encoding strategy: %.6f\n", power_res))
 ```
   
   
@@ -345,26 +389,130 @@ Code a **permutation** test to compare `false_recall_proportion` for shallow ver
 ## Question 8:  
 a: Your permutations will be randomly shuffling / swapping condition membership (deep / shallow strategy usage).
 ```{r}
+# Define the permutation test function
+# Sources:
+#   1) https://www.geeksforgeeks.org/r-language/sample-function/
+#   2) https://www.geeksforgeeks.org/r-language/how-to-create-dataframe-in-r/
 
+# Define the permutation test function (dataframe approach)
+permtest <- function(df) {
+  
+  # Shuffle encoding depth labels
+  df$encoding_depth_shuffled <- sample(df$encoding_depth)
+  
+  # Compute mean false recall for shuffled shallow group
+  shuffled_mean_shallow <- mean(
+    df$false_recall_proportion[df$encoding_depth_shuffled == "shallow"]
+  )
+  
+  # Compute mean false recall for shuffled deep group
+  shuffled_mean_deep <- mean(
+    df$false_recall_proportion[df$encoding_depth_shuffled == "deep"]
+  )
+  
+  # Create data frame
+  dataframe <- data.frame(
+    mean_falsealarms_shallow = shuffled_mean_shallow,
+    mean_falsealarms_deep = shuffled_mean_deep
+  )
+  
+  # Return data frame
+  return(dataframe)
+}
 ```
 
   
 b: Use the permutation function to conduct 1000 permutations. Set the seed to 2026 before you start your permutations. Save the results in a dataframe called “**permutations**” with 1000 rows, and 2 columns called “**mean_falsealarms_shallow**” and “**mean_falsealarms_deep**”. Output the top 10 rows of the “**permutations**” dataframe.  
 ```{r}
+# Sources:
+#   1) https://www.geeksforgeeks.org/r-language/for-loop-in-r/
+#   2) https://www.geeksforgeeks.org/r-language/how-to-create-dataframe-in-r/
 
+# Set the seed to 2026
+set.seed(2026)
+
+# Create dataframe for permutation test
+perm_df <- participant_level_data[
+  participant_level_data$encoding_depth %in% c("shallow", "deep"),
+  c("false_recall_proportion", "encoding_depth")
+]
+
+# Initialize data frame
+permutations <- data.frame(
+  mean_falsealarms_shallow = c(),
+  mean_falsealarms_deep = c()
+)
+
+# Run permutations
+for (i in 1:1000) {
+  permutations <- bind_rows(permutations, permtest(perm_df))
+}
+
+# Extract first 10 rows
+first_10_rows <- permutations[1:10, ]
+
+# Log the results
+knitr::kable(first_10_rows, caption = "First 10 Rows of Permuted Data")
 ```
 
   
 c: Plot a **histogram** of the 1000 mean differences between the shuffled groups, and
 show where the sample mean lies with a vertical line.  
 ```{r}
-  
+# Sources
+#   1) https://www.rdocumentation.org/packages/graphics/versions/3.6.2/topics/abline
+
+# Get false recall data for permutations
+shallow_false_recall_permutation_data <- permutations$mean_falsealarms_shallow
+deep_false_recall_permutation_data <- permutations$mean_falsealarms_deep
+
+# Get the differences of means vector
+permutation_differences <- deep_false_recall_permutation_data - shallow_false_recall_permutation_data
+
+# Make the histogram
+hist(permutation_differences,
+     main = "Permutation Test Difference of Means\nFor False Recall Proportions (n = 1000)", 
+     xlab = "Difference of Means (Deep - Shallow)", 
+     ylab = "Count",
+     col  = "lightblue",
+     )
+
+# Get deep participants' false recall data
+deep_false_recall_data <-
+  participant_level_data$false_recall_proportion[
+    participant_level_data$encoding_depth == "deep"]
+
+# Get shallow participants' false recall data
+shallow_false_recall_data <-
+  participant_level_data$false_recall_proportion[
+    participant_level_data$encoding_depth == "shallow"]
+
+# Get sample mean and plot horizontal line
+abline(v = mean(deep_false_recall_data) - mean(shallow_false_recall_data), col = "red", lwd = 2)
+
 ```
 
   
 d: Calculate the p-value of the two-tailed permutation test. Save this p-value in a variable called “**p_val_permutation**” and output this value.  
 ```{r}
 
+# Get difference of sample means
+sample_diff_of_means <- mean(deep_false_recall_data) - mean(shallow_false_recall_data)
+
+# Get number of samples whose absolute value is greater than sample difference
+bool_list <- abs(permutation_differences) >= abs(sample_diff_of_means)
+num_abs_greater <- 0
+for (boolean in bool_list) {
+  if (boolean == TRUE) {
+    num_abs_greater <- num_abs_greater + 1
+  }
+}
+
+# Get p value
+p_val_permutation <- num_abs_greater / length(permutation_differences)
+
+# Print result
+cat(sprintf("False Recall Proportion Difference of Means Permutation P-Value: %.6f\n", p_val_permutation))
 ```
 
   
@@ -379,7 +527,53 @@ e:  Write up the permutation results in the form of a sentence for a research pa
 Calculate the **confidence interval** around the false recall proportion for deep versus shallow strategy individuals, using the formula mentioned in class. Place the confidence intervals into a dataframe called `Cis` with one row and the columns “ci_lower_shallow”, “ci_upper_shallow”, “ci_lower_deep”, “ci_upper_deep”.
 
 ```{r}
-# Cis  = ...
+
+# Get false recall data for shallow and deep
+shallow_false_recall_data <-
+  participant_level_data$false_recall_proportion[
+    participant_level_data$encoding_depth == "shallow"]
+
+deep_false_recall_data <-
+  participant_level_data$false_recall_proportion[
+    participant_level_data$encoding_depth == "deep"]
+
+# Sample sizes of data
+n_shallow <- length(shallow_false_recall_data)
+n_deep <- length(deep_false_recall_data)
+
+# Means of each
+mean_shallow <- mean(shallow_false_recall_data)
+mean_deep <- mean(deep_false_recall_data)
+
+# Standard deviations of each
+sd_shallow <- sd(shallow_false_recall_data)
+sd_deep <- sd(deep_false_recall_data)
+
+# Standard errors for each
+se_shallow <- sd_shallow / sqrt(n_shallow)
+se_deep <- sd_deep / sqrt(n_deep)
+
+# Critical t value for 95% CI
+t_crit_shallow <- qt(0.975, df = n_shallow - 1)
+t_crit_deep <- qt(0.975, df = n_deep - 1)
+
+# Confidence intervals
+ci_lower_shallow <- mean_shallow - t_crit_shallow * se_shallow
+ci_upper_shallow <- mean_shallow + t_crit_shallow * se_shallow
+
+ci_lower_deep <- mean_deep - t_crit_deep * se_deep
+ci_upper_deep <- mean_deep + t_crit_deep * se_deep
+
+# Combine into Cis dataframe
+Cis <- data.frame(
+  ci_lower_shallow = ci_lower_shallow,
+  ci_upper_shallow = ci_upper_shallow,
+  ci_lower_deep = ci_lower_deep,
+  ci_upper_deep = ci_upper_deep
+)
+
+# Log the results
+knitr::kable(Cis, caption = "False Recall Proportion Confidence Intervals")
 
 ```
 
@@ -389,36 +583,133 @@ We will now calculate confidence intervals using **bootstrapping** – this meth
   
 a: Take a bootstrap sample from the data, of the same sample size, for "false recall proportion" for shallow strategy and deep strategy individuals separately. Calculate the sample means.   
 ```{r}
-#Take your bootstrap sample and calculate your sample mean here
+# Sources:
+#   1) https://www.statology.org/bootstrap-confidence-intervals/
+#   2) https://www.geeksforgeeks.org/r-language/sample-function/
 
+# Take one bootstrap sample for shallow
+bootstrap_shallow <- sample(shallow_false_recall_data,
+                            size = length(shallow_false_recall_data),
+                            replace = TRUE)
+
+# Take one bootstrap sample for deep
+bootstrap_deep <- sample(deep_false_recall_data,
+                         size = length(deep_false_recall_data),
+                         replace = TRUE)
+
+# Calculate sample means
+mean_bootstrap_shallow <- mean(bootstrap_shallow)
+mean_bootstrap_deep <- mean(bootstrap_deep)
+
+# Print results
+cat(sprintf("Shallow Strategy Bootstrap Mean: %.6f\n", mean_bootstrap_shallow))
+cat(sprintf("Deep Strategy Bootstrap Mean: %.6f\n", mean_bootstrap_deep))
 ```
 
   
   
 b: Repeat 10.a for 1,000 iterations. Set the seed to 2026 before you start your permutations. Create a dataframe with your bootstraps called “**bootstraps**” and the columns “mean_falsealarms_shallow” and “mean_falsealarms_deep”. Output the first 10 rows of the “**bootstraps**” dataframe.  
 ```{r}
+# Set seed
+set.seed(2026)
 
+# Initialize bootstrap data frame
+bootstraps <- data.frame(
+  mean_falsealarms_shallow = c(),
+  mean_falsealarms_deep = c()
+)
+
+# Run 1000 bootstrap samples
+for (i in 1:1000) {
+  
+  # Bootstrap samples
+  bootstrap_shallow <- sample(shallow_false_recall_data,
+                              size = length(shallow_false_recall_data),
+                              replace = TRUE)
+  
+  bootstrap_deep <- sample(deep_false_recall_data,
+                           size = length(deep_false_recall_data),
+                           replace = TRUE)
+  
+  # Store means
+  bootstraps <- bind_rows(
+    bootstraps,
+    data.frame(
+      mean_falsealarms_shallow = mean(bootstrap_shallow),
+      mean_falsealarms_deep = mean(bootstrap_deep)
+    )
+  )
+}
+
+# Output first 10 rows
+knitr::kable(head(bootstraps, 10), caption = "First 10 Bootstrap Samples")
 ```
 
   
 c: Plot two overlaid histograms of the bootstrap sample means for shallow strategy participants, and the bootstrap sample means for deep strategy participants.   
 ```{r}
-#Plot your histograms here
 
+# Plot shallow bootstrap means
+hist(bootstraps$mean_falsealarms_shallow,
+     col  = "orange",
+     main = "Bootstrap Sample Means for False Recall Proportion",
+     xlab = "Bootstrap Mean",
+     ylab = "Count")
+
+# Overlay deep bootstrap means
+hist(bootstraps$mean_falsealarms_deep,
+     col = "purple",
+     add = TRUE)
+
+# Make clear which is which
+legend("topright",
+       legend = c("Shallow", "Deep"),
+       fill = c("orange", "purple"))
 
 ```
   
   
 d: Calculate the bootstrapped 95% confidence intervals for shallow and deep strategy participants. (Hint: These are the values at the bottom and top 2.5% of your distributions.) Place the confidence intervals into a dataframe called “**Cis_boot**” with one row and the columns “ci_lower_shallow”, “ci_upper_shallow”, “ci_lower_deep”, “ci_upper_deep”. Output the “**Cis_boot**” dataframe.  
 ```{r}
+# Sources:
+#   1) https://www.statology.org/bootstrap-confidence-intervals/
 
+# Sort bootstrap distributions
+sorted_shallow <- sort(bootstraps$mean_falsealarms_shallow)
+sorted_deep <- sort(bootstraps$mean_falsealarms_deep)
+
+# Get indices for 2.5% and 97.5%
+lower_index <- 0.025 * length(sorted_shallow)
+upper_index <- 0.975 * length(sorted_shallow)
+
+# Confidence intervals
+ci_lower_shallow <- sorted_shallow[lower_index]
+ci_upper_shallow <- sorted_shallow[upper_index]
+
+ci_lower_deep <- sorted_deep[lower_index]
+ci_upper_deep <- sorted_deep[upper_index]
+
+# Combine into dataframe
+Cis_boot <- data.frame(
+  ci_lower_shallow = ci_lower_shallow,
+  ci_upper_shallow = ci_upper_shallow,
+  ci_lower_deep = ci_lower_deep,
+  ci_upper_deep = ci_upper_deep
+)
+
+# Output results
+knitr::kable(Cis_boot, caption = "Bootstrapped 95% Confidence Intervals")
 ```
 
   
 ## Question 11:  
 Output the data frames with your originally calculated confidence intervals (“**Cis**” from Q9) and your bootstrapped confidence intervals (“**Cis_boot**” from Q10).  
 ```{r}
+# Output parametric confidence intervals
+knitr::kable(Cis, caption = "Parametric Confidence Intervals")
 
+# Output bootstrapped confidence intervals
+knitr::kable(Cis_boot, caption = "Bootstrapped Confidence Intervals")
 ```
 
 How do the originally (parametric) calculated and bootstrapped confidence intervals compare?  
