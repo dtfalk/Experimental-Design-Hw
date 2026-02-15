@@ -333,15 +333,16 @@ Now we can finally put all the pieces together from the experiment to answer one
 Standardize all variables before including them in your regression. Add the standardized variables to “class_data” and call them “true_recall_proportion_z” and “vviq_z”. Output the first 10 rows of “class_data”.
 ```{r}
 
-# Get z scored data for true recall and vviq
-# (seemed safest to calculate by hand)
-true_recall_proportion_z <- (trueRecall_scores - mean(trueRecall_scores)) / sd(trueRecall_scores) 
-vviq_z <- (vviq_scores - mean(vviq_scores)) / sd(vviq_scores)
-
 
 # Add values to class data
-class_data$true_recall_proportion_z <- true_recall_proportion_z
-class_data$vviq_z <- vviq_z
+class_data$true_recall_proportion_z <- scale(class_data$true_recall_proportion)
+class_data$vviq_z <- scale(class_data$VVIQ_score)
+
+# Log the results
+knitr::kable(
+  class_data,
+  caption = "Class Data (First 10 Rows)"
+)
 ```
 
 Using R built-in functions, calculate the multiple linear regression fit for a model with the following variables. Call this model "fit".  Output the summary of the model.  
@@ -352,16 +353,53 @@ b. Interference type as a categorical IV.
 c. VVIQ score as a continuous IV.  
 d. True recall performance as a continuous DV.    
 ```{r}
-#fit
+
+# Let's do this up front so I don't have to do this every time
+class_data$encoding_strategy <- as.factor(class_data$encoding_strategy)
+class_data$interference_type <- as.factor(class_data$interference_type)
+
+# Calculate the multiple linear regression
+fit <- lm(
+          true_recall_proportion_z ~
+          encoding_strategy + interference_type + vviq_z,
+          data = class_data
+)
+
+# Print the summary
+summary(fit)
 ```
 
 
   
 ## Question 6:  
 Report the best fit plane function from Question 5.
-*Please write your response in the lines below.* 
 
+Let's define some variables first...
 
+True Recall Proportion (z-scored):
+  Denote this as TRP_z
+  
+Encoding Strategy:
+  Reference Category: imag_association
+  Let ES_1 = 1 if imag_single, 0 otherwise      (coefficient = "B_1")
+  Let ES_2 = 1 if verb_association, 0 otherwise (coefficient = "B_2")
+  Let ES_3 = 1 if verb_single, 0 otherwise      (coefficient = "B_3")
+
+Interference Type:
+  Reference Category : control
+  Let IT_1 = 1 if verbal, 0 otherwise           (coefficient = "B_4")
+  Let IT_2 = 1 if visual, 0 otherwise           (coefficient = "B_5")
+
+VVIQ Score (z-scored):
+  Denote this as VVIQ_z                         (coefficient = "B_6")
+  
+Now our plane equation is...
+
+TRP_z = Intercept + (B_1 * ES_1) + (B_2 * ES_2) + (B_3 * ES_3) + (B_4 * IT_1) + (B_5 * IT_2) + (B_6 * VVIQ_z)
+
+and plugging in values for the B_i's we get...
+
+TRP_z = 0.35264 + (-0.39064 * ES_1) + (-0.10819 * ES_2) + (-0.19955 * ES_3) + (-0.30219 * IT_1) + (-0.24823 * IT_2) + (0.05359 * VVIQ_z)
   
 ## Question 7:  
 Write code that partitions the variance by doing the following steps (parts a-c):
@@ -371,14 +409,36 @@ Write code that partitions the variance by doing the following steps (parts a-c)
 ### 7.a:  
 Calculate the sum of square errors (SSE) from scratch. Save this in a variable called “SSE” and output the value.
 ```{r}
-#SSE
+
+# Get predicted values
+pred_trp <- predict(fit)
+
+# Get squared differences of errors
+sqrd_errs <- (class_data$true_recall_proportion_z - pred_trp) ^ 2
+
+# Get SSE
+SSE <- sum(sqrd_errs)
+
+cat(sprintf("Sum of Square Errors (SSE): %.6f", SSE))
 ```
 
   
 ### 7.b:  
 Calculate the sum of square regression (SSR) from scratch. Save this in a variable called “SSR” and output the value. 
 ```{r}
-#SSR
+# Actually we shouldn't need this block since we z scored so mean is just 0
+# ==========================================================================
+# Get mean of predicted values
+# mean_trp <- mean(class_data$true_recall_proportion_z)
+
+# Get squared residuals
+# sqrd_diffs <- (pred_trp - mean_trp) ^ 2
+# ==========================================================================
+
+# Get SSR
+SSR <- sum(pred_trp ^ 2)
+
+cat(sprintf("Sum of Square Regression (SSR): %.6f", SSR))
 ```
 
   
@@ -386,13 +446,18 @@ Calculate the sum of square regression (SSR) from scratch. Save this in a variab
 ### 7.c:  
 Calculate the sum of square total (SST) from scratch. Save this in a variable called “SST” and output the value.
 ```{r}
-#SST
+# Similarly we can just sum and square because we centered DV around 0
+# ====================================================================
+
+SST <- sum(class_data$true_recall_proportion_z ^ 2)
+cat(sprintf("Sum of Square Total (SST): %.6f", SST))
 ```
   
   
 ## Question 8:  
 Briefly describe: What do these variance components tell us about the amount of variance explained by the regression?
-*Please write your response in the lines below.* 
+
+The total variance in true recall (SST = 77) is partitioned into explained variance (SSR = 3.066) and unexplained variance (SSE = 73.934). The variance explained is very small relative to the total variance, which means that the predictors account for only a small fraction of the variability in true recall. Most of the variance is in the unexplained variance term (SSE). This suggests that the regression model has relatively weak explanatory power with respect to the DV, true recall performance.
 
 
 
@@ -402,20 +467,79 @@ Write code that further partitions the variance using a reduced model. Show thes
 ### 9.a:  
 How much of the SSR is unique to encoding strategy? Call this variable “UniqueSSR_encoding_strategy” and output the value.
 ```{r}
-#UniqueSSR_encoding_strategy
+
+# Calculate the multiple linear regression without including the encoding strategy
+fit_no_encoding <- lm(
+          true_recall_proportion_z ~
+          interference_type + vviq_z,
+          data = class_data
+)
+
+# Get predicted true recall performance for no encoding model
+pred_trp_no_encoding <- predict(fit_no_encoding)
+
+# Get SSR for no encoding
+SSR_no_encoding <- sum(pred_trp_no_encoding ^ 2)
+
+# Subtract off no encoding SSR
+UniqueSSR_encoding_strategy <- SSR - SSR_no_encoding
+
+# Print results
+cat(sprintf("SSR unique to encoding strategy: %.6f", UniqueSSR_encoding_strategy))
 ```
 
   
 ### 9.b:  
 How much of the SSR is unique to VVIQ score? Call this variable “UniqueSSR_vviq” and output the value. 
 ```{r}
-#UniqueSSR_vviq
+
+# Calculate the multiple linear regression without including vviq
+fit_no_vviq <- lm(
+          true_recall_proportion_z ~
+          encoding_strategy + interference_type,
+          data = class_data
+)
+
+# Get predicted true recall performance for no vviq
+pred_trp_no_vviq <- predict(fit_no_vviq)
+
+# Get SSR for no vviq
+SSR_no_vviq <- sum(predict(fit_no_vviq) ^ 2)
+
+# Subtract off no vviq SSR
+UniqueSSR_vviq <- SSR - SSR_no_vviq
+
+# Print results
+cat(sprintf("SSR unique to VVIQ: %.6f", UniqueSSR_vviq))
 ```
   
 ### 9.c:  
 How much of the SSR is shared between these two factors? Call this variable “Shared_SSR” and output the value. 
 ```{r}
-#Shared_SSR
+# Working under the assumption that we want ONLY SSR shared by encoding and vviq...
+
+# Calculate interference only SSR
+fit_interference_only <- lm(
+  true_recall_proportion_z ~ interference_type,
+  data = class_data
+)
+SSR_interference_only <- sum(predict(fit_interference_only) ^ 2)
+
+# Thinking in terms of ...
+# Total_SSR = All SSR in interference + SSR unique to encoding + encoding unique to VVIQ +
+Shared_SSR <- (SSR - SSR_interference_only) -
+              UniqueSSR_encoding_strategy -
+              UniqueSSR_vviq
+
+
+# Print results
+cat(sprintf("SSR shared by ONLY encoding strategy and VVIQ: %.6f", Shared_SSR))
+
+
+
+
+
+
 ```
   
   
@@ -425,32 +549,68 @@ How much of the SSR is shared between these two factors? Call this variable “S
 ### 10.a:  
 Calculate R^2 goodness of fit **from scratch**. Save this in a variable called “Rsq” and output the value.
 ```{r}
-#Rsq
+
+# Compute R^2
+Rsq <- SSR / SST
+
+# Print results
+cat(sprintf("Full Model R^2: %.6f", Rsq))
 ```
 
   
 ### 10.b:  
 Calculate Adjusted R^2 **from scratch**. Save this in a variable called “Adj_Rsq” and output the value. 
 ```{r}
-#Adj_Rsq
+
+# Number of data points
+n <- nrow(class_data)
+
+# Number of predictors
+k <- 6
+
+# Get adjusted R^2
+numerator <- SSE / (n - k - 1)
+denominator <- SST / (n - 1)
+Adj_Rsq <- 1 - (numerator / denominator)
+
+# Print results
+cat(sprintf("Adjusted R^2: %.6f", Adj_Rsq))
 ```
 
 Briefly discuss how the relationship between R^2 and Adjusted R^2 here relates to the ideal number of predictors in the model. 
-*Please write your response in the lines below.* 
 
+Adjusted R^2 penalizes models that use more predictors because they could just be overfitting. In this case R^2 is small (0.04) and adjusted R^2 is negative (-0.04). This means that the predictors are not improving the model beyond what would be expected by change and that the model may be including more predictors than are justified given the amount of variance explained. 
   
 ### 10.c:  
 Calculate Cohen’s f2 for effect size **from scratch**. Save this in a variable called “cohen_fsq” and output the value.
 ```{r}
-#cohen_fsq
+
+# Calculate it
+cohen_fsq <- Rsq / (1 - Rsq)
+
+# Print it
+cat(sprintf("Cohen's f^2: %.6f", cohen_fsq))
 ```
   
   
 ### 10.d:  
 Calculate the F-statistic and corresponding p-value for overall model significance **from scratch**. Save these in separate variables called “F_stat” and “pval_F” and output these values.
 ```{r}
-#F_stat
-#pval_F
+
+# Get the degrees of freedom for predictors and residuals
+predictors_df <- k
+residuals_df <- n - k - 1
+
+# Compute F statistic
+numerator <- SSR / predictors_df
+denominator <- SSE / residuals_df
+F_stat <- numerator / denominator
+
+# Compute p-value
+pval_F <- 1 - pf(F_stat, df1 = predictors_df, df2 = residuals_df)
+
+cat(sprintf("F-statistic: %.6f\n", F_stat))
+cat(sprintf("p-value: %.6f", pval_F))
 ```
 
 
@@ -459,6 +619,29 @@ Calculate the F-statistic and corresponding p-value for overall model significan
 Calculate these metrics using built-in R functions and and report those here. 
 ```{r}
 
+# Just goin' right on ahead and usin' the built in functions
+# ==========================================================
+
+# R^2
+Rsq_builtin <- summary(fit)$r.squared
+
+# Adjusted R^2
+Adj_Rsq_builtin <- summary(fit)$adj.r.squared
+
+# F statistic
+F_stat_builtin <- summary(fit)$fstatistic[1]
+
+# F statistic p val
+pval_F_builtin <- pf(summary(fit)$fstatistic[1],
+                     summary(fit)$fstatistic[2],
+                     summary(fit)$fstatistic[3],
+                     lower.tail = FALSE)
+
+# Print the results
+cat(sprintf("Built-in R^2: %.6f\n", Rsq_builtin))
+cat(sprintf("Built-in Adjusted R^2: %.6f\n", Adj_Rsq_builtin))
+cat(sprintf("Built-in F-statistic: %.6f\n", F_stat_builtin))
+cat(sprintf("Built-in p-value: %.6f", pval_F_builtin))
 ```
 
 
