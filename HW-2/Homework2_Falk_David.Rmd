@@ -28,9 +28,9 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 # Can set your local path to control exactly where this saves. Otherwise, will save in directory with the Rmd file
 # knitr::opts_knit$set(root.dir = "/home/expdes/outputs/")  
 
-library(tidyverse)  #hub of many packages
-set.seed(1)  #reproducible results
-theme_set(theme_minimal())  #nice-looking plots
+library(tidyverse)  # hub of many packages
+set.seed(1)  # reproducible results
+theme_set(theme_minimal())  # nice-looking plots
 
 ```
 
@@ -66,7 +66,7 @@ hist(true_recall_data,
      ylab = "Count",
      xlim = c(0,1),
      ylim = c(0,8),
-     col  = "darkolivegreen4",
+     col  = "darkolivegreen4"
      )
 # -------------------
 
@@ -74,16 +74,16 @@ hist(true_recall_data,
 # -------------------
 hist(false_recall_data,
      main = "False Recall Proportions Across All Participants", 
-     xlab = "True Recall Proportion", 
+     xlab = "False Recall Proportion", 
      ylab = "Count",
      xlim = c(0,1),
      ylim = c(0,8),
-     col  = "brown1",
+     col  = "brown1"
      ) 
 ```
 
 Briefly discuss: What shape do these distributions take? Are there any particularly noticeable features about these distributions?    
-*Please write your answer to the open-response question in the lines below*  
+ 
 The histogram for the true recall proportions appears normal. There may be too little data to tell but it appears to have a large, normal-looking bump around 0.5 to 0.7 and then the graph tapers off on both the lefts and the right. On the left tail there is a potential outlier around 0.1, but it is hard to say if this is of signifigance just by eyeballing the graph.
 
 The historgram for the false recall proportions appears to be either uniform or heavier closer to 0 and tapering off towards thr right. It is hard to tell which it would be without more data or a more advanced statistical analysis (Kolomgrov-Smirnov?). If we had more data then I would be interested in seeing whether that dip around 0.4-0.7 fills in and everything evens out or whether the areas around 0.0-0.4 proceed to fill out.
@@ -198,80 +198,79 @@ ttest_paired <- function(samp1, samp2) {
 
 Use your "**ttest_paired**" function to compare `true_recall_proportion` for verbal versus visual participants. Output the resulting t-statistic. For this question, only use the first 12 participants in each condition (remove ids 862003, TgA3wccPQM9Has7)  
 ```{r}
-# Ids to filter out in the modality case
+# Ids to filter out for modality
 modality_ids_to_filter <- c("862003", "TgA3wccPQM9Has7")
 
 # Filter out specified IDs
 no_ids_modality <- participant_level_data[!(participant_level_data$participant %in% modality_ids_to_filter),]
 
 # Get verbal vector
-verbal_true_recall_data <-
+verbal_true_recall_data_paired <-
   no_ids_modality$true_recall_proportion[
-    no_ids_modality$encoding_modality == "verbal"]
+    no_ids_modality$encoding_modality == "verbal"][1:12]
 
 # Get visual vector
-visual_true_recall_data <-
+visual_true_recall_data_paired <-
   no_ids_modality$true_recall_proportion[
-    no_ids_modality$encoding_modality == "visual"]
+    no_ids_modality$encoding_modality == "visual"][1:12]
 
 # Get paired T-statistic
-paired_t_stat_modality_builtin <- ttest_paired(verbal_true_recall_data, visual_true_recall_data)
+paired_t_stat_modality_handwritten <- ttest_paired(verbal_true_recall_data_paired, visual_true_recall_data_paired)
 
 # Print the result
-cat(sprintf("(Encoding Modality) Handwritten Paired Samples T-Statistic: %.6f", paired_t_stat_modality_builtin))
+cat(sprintf("(Encoding Modality) Handwritten Paired Samples T-Statistic: %.6f", paired_t_stat_modality_handwritten))
 ```
 
 Use your "**ttest_paired**" function to compare `true_recall_proportion` for shallow versus deep strategy participants. Output the resulting t-statistic. For this question, only use the first 11 participants in each condition (remove ids 662545, 665565, 697823, 862003)  
 ```{r}
-# Ids to filter out in the modality case
+# Ids to filter out for depth
 depth_ids_to_filter <- c("662545", "665565", "697823", "862003")
 
 # Filter out specified IDs
 no_ids_depth <- participant_level_data[!(participant_level_data$participant %in% depth_ids_to_filter),]
 
 # Get verbal vector
-shallow_true_recall_data <-
+shallow_true_recall_data_paired <-
   no_ids_depth$true_recall_proportion[
-    no_ids_depth$encoding_depth == "shallow"]
+    no_ids_depth$encoding_depth == "shallow"][1:11]
 
 # Get visual vector
-deep_true_recall_data <-
+deep_true_recall_data_paired <-
   no_ids_depth$true_recall_proportion[
-    no_ids_depth$encoding_depth == "deep"]
+    no_ids_depth$encoding_depth == "deep"][1:11]
 
 # Get paired T-statistic
-paired_t_stat_modality_builtin <- ttest_paired(shallow_true_recall_data, deep_true_recall_data)
+paired_t_stat_depth_handwritten <- ttest_paired(shallow_true_recall_data_paired, deep_true_recall_data_paired)
 
 # Print the result
-cat(sprintf("(Encoding Depth) Handwritten Paired Samples T-Statistic: %.6f", paired_t_stat_modality_builtin))
+cat(sprintf("(Encoding Depth) Handwritten Paired Samples T-Statistic: %.6f", paired_t_stat_depth_handwritten))
 ```
 
 Show how you would also calculate it using a built-in R function.   
 ```{r}
-
-# Calculations with built-in R functions should go here
 # Sources
 #   1) https://www.statology.org/paired-samples-t-test-r/
 
 # Encoding modality via built-in function
-paired_t_stat_modality_builtin <- unname(t.test(verbal_true_recall_data, visual_true_recall_data, paired = TRUE)$statistic)
+paired_t_stat_modality_builtin <- unname(t.test(verbal_true_recall_data_paired, visual_true_recall_data_paired, paired = TRUE)$statistic)
 cat(sprintf("(Encoding Modality) Built-in Paired Samp. T-Statistic:  %.6f\n", paired_t_stat_modality_builtin))
 
 # Encoding depth via built-in function
-paired_t_stat_depth_builtin <- unname(t.test(shallow_true_recall_data, deep_true_recall_data, paired = TRUE)$statistic)
+paired_t_stat_depth_builtin <- unname(t.test(shallow_true_recall_data_paired, deep_true_recall_data_paired, paired = TRUE)$statistic)
 cat(sprintf("(Encoding Depth)    Built-in Paired Samp. T-Statistic: %.6f", paired_t_stat_depth_builtin))
+
 ```
 
 
   
 ## Question 4: Write up  
 a: Briefly discuss which is the more appropriate test to use, and why.   
-*Please write your answer to the question in the lines below*  
+
 The independent samples is more appropriate for this situation. 
 
 The independent samples test is appropriate for comparing different groups. For example "visual" vs "verbal" encoding modality or "deep" vs "shallow" encoding depth. 
 
-The paired samples test is inappropriate here because paired tests assume that there is paired data. Since each subject has EITHER a visual or verbal encoding modality and EITHER a deep or verbal encoding modality there is no meaningful way to compute paired differences. There is no paired data.
+The paired samples test is inappropriate here because paired tests assume that there is paired data for each subject. Since each subject has EITHER a visual or verbal encoding modality and EITHER a deep or shallow encoding modality there is no meaningful way to compute paired differences. There is no paired data.
 
   
 b: Get the p-value for that test using the R function `pt()`. Make sure to output this value.  
@@ -279,11 +278,15 @@ b: Get the p-value for that test using the R function `pt()`. Make sure to outpu
 # Sources
 #   1) https://www.statology.org/working-with-the-student-t-distribution-in-r-dt-qt-pt-rt/
 
-df_modality <- length(verbal_true_recall_data) + length(visual_true_recall_data) - 2
-p_value_modality <- pt(indep_t_stat_modality, df_modality)
+df_modality <- length(participant_level_data[participant_level_data$encoding_modality == "verbal",]$true_recall_proportion) +
+  length(participant_level_data[participant_level_data$encoding_modality == "visual",]$true_recall_proportion) - 2
 
-df_depth <- length(shallow_true_recall_data) + length(deep_true_recall_data) - 2
-p_value_depth <- pt(indep_t_stat_depth, df_depth)
+p_value_modality <- 2 * pt(abs(indep_t_stat_modality), df_modality, lower.tail = FALSE)
+
+df_depth <- length(participant_level_data[participant_level_data$encoding_depth == "shallow",]$true_recall_proportion) +
+  length(participant_level_data[participant_level_data$encoding_depth == "deep",]$true_recall_proportion) - 2
+
+p_value_depth <- 2 * pt(abs(indep_t_stat_depth), df_depth, lower.tail = FALSE)
 
 cat(sprintf("(Encoding Modality) P Value: %.6f\n", p_value_modality))
 cat(sprintf("(Encoding Depth)    P Value: %.6f", p_value_depth))
@@ -291,21 +294,34 @@ cat(sprintf("(Encoding Depth)    P Value: %.6f", p_value_depth))
   
 Describe – what is the null hypothesis and the alternative hypothesis for each test, and what does the p-value tell us about either of these?  
 *Please write your answer to the question in the lines below* 
-Modality
---------------------------
+Modality\n
+--------------------------\n
 Null Hypothesis: There is no difference in true recall performance between the visual and verbal groups.
+
 Alternative Hypothesis:
+There is a difference in true recall performance between the visual and verbal groups.
 
-Depth
---------------------------
+P-Value Interpretation:
+The p-value represents the probability of seeing a difference in true recall performance for the encoding modality equal to or larger than the sample difference if you assume that the null hypothesis is true.
+--------------------------\n
+
+
+Depth\n
+--------------------------\n
 Null Hypothesis (Depth): There is no difference in true recall performance between the shallow and deep groups.
- 
-  
-c: Write up the t-test results for that test in the format of a sentence for a research paper.  
-*Please write your answer to the question in the lines below*  
 
-  
-# Part 2: Effect size  
+Alternative hypothesis:
+There is a difference in true recall performance between the shallow and deep groups.
+ 
+P-Value Interpretation:
+The p-value represents the probability of seeing a difference in true recall performance for the encoding strategy equal to or larger than the sample difference if you assume that the null hypothesis is true.
+--------------------------\n
+
+c: Write up the t-test results for each test in the format of a sentence for a research paper.  
+
+Modality: An independent samples t-test did not identify a signifcant difference between true recall performance between subjects visual vs verbal encoding modality conditions (df = 20 t = 0.286, p = 0.777).
+
+Depth: An independent-samples t-test did not identify a statistically significant difference in true recall performance for subjects in the shallow vs deep encoding strategies, (df = 22, t = -0.666, p = 0.512).
   
 ## Question 5:  
 Write a function (called "**cohend**" <- function(samp1, samp2)) to calculate the effect size (Cohen’s d) from scratch (taking the two samples as the input).  
@@ -354,7 +370,7 @@ cat(sprintf("Cohen's d for deep (samp1) vs shallow (samp2) encoding strategy: %.
   
 ## Question 6:  
 Re-write up the t-test results including effect size. Is this a small, medium, or large effect?  
-
+An independent samples t-test was conducted to compare true recall performance between shallow and deep encoding strategies and did not reveal a statistically significant difference between groups, t(22) = -0.666, p = 0.512. The effect size was small (Cohen’s d = 0.26), suggesting that depth of encoding had, at most, only a small impact on true recall performance in this sample.
   
 ## Question 7:  
 Using `power.t.test` in R, calculate the optimal sample size using the effect size from these data and a desired power level of 90%. Save the results of the power calculation to a variable called **power_res**.
@@ -371,10 +387,10 @@ power_res <- power.t.test(
     sd = 1,
     sig.level = 0.05,
     power = 0.90,
-    type = "two.sample")$n
+    type = "two.sample")
 
 # Print result
-cat(sprintf("power_res for encoding strategy: %.6f\n", power_res))
+cat(sprintf("Required n per group: %.6f\n", power_res$n))
 ```
   
   
@@ -517,9 +533,9 @@ cat(sprintf("False Recall Proportion Difference of Means Permutation P-Value: %.
 
   
 e:  Write up the permutation results in the form of a sentence for a research paper.  
-*Please write your sentence in the lines below*
+
+A two-tailed permutation test with 1,000 permutations was conducted to examine whether false recall proportions differed between shallow and deep encoding strategies. The permutation test did not reveal a statistically significant difference between groups (p = 0.731).
  
-  
 
 # Part 4: Bootstrapping confidence intervals  
   
@@ -679,8 +695,8 @@ sorted_shallow <- sort(bootstraps$mean_falsealarms_shallow)
 sorted_deep <- sort(bootstraps$mean_falsealarms_deep)
 
 # Get indices for 2.5% and 97.5%
-lower_index <- 0.025 * length(sorted_shallow)
-upper_index <- 0.975 * length(sorted_shallow)
+lower_index <- ceiling(0.025 * length(sorted_shallow))
+upper_index <- floor(0.975 * length(sorted_shallow))
 
 # Confidence intervals
 ci_lower_shallow <- sorted_shallow[lower_index]
@@ -713,9 +729,11 @@ knitr::kable(Cis_boot, caption = "Bootstrapped Confidence Intervals")
 ```
 
 How do the originally (parametric) calculated and bootstrapped confidence intervals compare?  
-*Please write your response in the lines below*  
+
+The parametric and bootstrapped confidence intervals seem to have very similar ranges, but the bootstrapped confidence intervals are narrower for both shallow and deep. I don't know exactly how signifcant this is, but I would guess that the results are consistent across the two methods.
   
 What does your bootstrapped confidence interval imply about the difference (or similarity) in false memories based on depth of encoding strategy?  
-*Please write your response in the lines below*  
+
+The bootstrapped confidence intervals show significant overlap for shallow and deep conditions. They have nearly identical lower bounds but the shallow condition has an upper bound 0.1 points higher than the deep strategy. This could be due to chance, or could alternatively imply that the shallow strategy leads to higher variability towards the top of the range.
   
 

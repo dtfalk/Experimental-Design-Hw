@@ -1,0 +1,347 @@
+
+---
+title: "Homework 3"
+author: "David Falk"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+<!---
+In order to check that all the necessary packages are installed, Click the File > New File > R Markdown button and keep all of the options as is. Save the document somewhere, and, while that new document is open, click the knit button. If a window with some plots shows up, everything is installed correctly. If RStudio prompts you to install any packages, you should install them.
+-->
+
+<!---
+Please save this file as Homework3_lastname_firstname.Rmd
+
+Be sure to update the author field in the block above.
+
+While you are working on your homework, you can use the green arrows to run a "chunk" of code. In order to produce the final document, use the knit button. You will turn in both the Rmd file and the knitted html file, which will appear next to wherever you saved the Rmd file if there are no errors.
+
+Beware, if you run chunks out of order or reuse variable names your code may produce different results when it is run again from top to bottom. Before you knit your document, it is a good idea to run all the chunks in order from top to bottom in a clean environment. Use the broom button in the environment pane to clear your variables and click the Session > Restart R and Run All Chunks.
+
+If you ever want to reference the documentation about a function, go to the console below and type ?function_name.
+-->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+# Can set your local path to control exactly where this saves. Otherwise, will save in directory with the Rmd file
+# knitr::opts_knit$set(root.dir = "/home/expdes/outputs/")  
+
+library(tidyverse)  # hub of many packages
+set.seed(1)  # reproducible results
+theme_set(theme_minimal())  # nice-looking plots
+
+```
+
+# Part 0: Importing Data  
+Import the class data from Canvas.  
+```{r}
+class_data <- read.csv(file.path("data", "class_data.csv"))
+participant_level_data <- read.csv(file.path("data", "participant_level_data.csv"))
+```
+
+
+   
+# Part 1: Simple Linear Regression  
+
+One question we have is whether imagery ability predicts memory performance (both true recall and false recall). will use a Simple Linear Regression to answer these questions, and we will start off using the `participant_level_data` first.  
+
+## Question 1: Create two scatterplots: (4 points total)  
+
+a. Plot VVIQ_score (x-axis) by true recall proportion (y-axis) for each participant. Be sure to title and label your plot appropriately and to use jitter if necessary.
+
+```{r}
+
+# Extract VVIQ and true recall
+vviq_scores        <- participant_level_data$VVIQ_score
+trueRecall_scores  <- participant_level_data$true_recall_proportion
+
+# Plot 
+plot(
+     vviq_p1q1,
+     toy_set_a$true_recall_proportion,
+     col = ifelse(toy_set_a$encoding_modality == "verbal", "orange", "purple"),
+     pch = 16,
+     xaxt = "n",
+     xlab = "Encoding Modality",
+     ylab = "True Recall Proportion",
+     xlim = c(0.8, 1.2),
+     ylim = c(0, 1),
+     main = "True Recall Proportion by Modality (Toy Set A)"
+)
+axis(1, at = c(0.9, 1.1), labels = c("Verbal", "Visual"))
+```
+
+b. Plot VVIQ_score (x-axis) by false recall proportion (y-axis) for each participant. Be sure to title and label your plot appropriately and to use jitter if necessary.
+
+```{r}
+```
+  
+## Question 2:  
+Calculate the slope (called m) and intercept (called b) of the best fit line for each scatterplot from scratch.
+
+For each scatterplot, calculate and save the slopes (m)  and intercepts (b) into two dataframes as specified below. Output these dataframes.
+
+Create “coefs_truerecall” with one row and two columns. The columns should be called “m_truerecall” and “b_truerecall” and should contain the slope and intercept values (respectively) for “true_recall_proportion”.
+```{r}
+#coefs_truerecall
+```
+  
+Create “coefs_falserecall” with one row and two columns. The columns should be called “m_falserecall” and “b_falserecall” and should contain the slope and intercept values (respectively) for “false_recall_proportion”.
+```{r}
+#coefs_falserecall
+```
+
+
+### 2.a:  
+Using your slope and intercept, plot the best fit line on top of the previous plot. Be sure to extend your plot boundaries to show the intercept.
+```{r}
+#scatterplot with best fit line for VVIQ by true recall proportion here
+```
+  
+```{r}
+#scatterplot with best fit line for VVIQ by false recall proportion here
+```
+
+
+### 2.b:  
+For each best fit line, write the linear function in slope-intercept form.
+*Please write your response in the lines below.* 
+
+  
+### 2.c:  
+For each scatterplot, briefly discuss: Visually looking at this best fit line, what can you describe about the slope and the relationship between these two variables? How does y change as you increase 1 unit in x?
+*Please write your response in the lines below.* 
+
+
+  
+## Question 3:  
+For each comparison, calculate the residuals.
+
+Create a new dataframe from `participant_level_data` called “truerecall_resid_bestfit” that contains the residuals of the model using “VVIQ_score” to predict “true_recall_proportion”. Output the first ten rows of the dataframe.   
+```{r}
+#truerecall_resid_bestfit 
+```
+  
+Create a new dataframe from `participant_level_data` called “falserecall_resid_bestfit” that contains the residuals of the model using “VVIQ_score” to predict “false_recall_proportion”. Output the first ten lines of the dataframe. 
+```{r}
+#falserecall_resid_bestfit
+```
+
+  
+For each best fit line, create a residuals plot.
+```{r}
+#residuals plot for VVIQ by true recall proportion best fit line here
+```
+  
+```{r}
+#residuals plot for VVIQ by false recall proportion best fit line here
+```
+
+  
+For each residual plot, briefly discuss: Do you see any patterns here? What does this mean about the linear fit, based on what you do/don’t see in the residuals? 
+*Please write your response in the lines below.* 
+
+
+
+## Question 4:
+Calculate the best fit lines using a built-in R function. 
+```{r}
+#best fit line for VVIQ & true recall proportion
+```
+  
+```{r}
+#best fit line for VVIQ & false recall proportion
+```
+
+How do these lines compare to the ones you calculated from scratch?
+*Please write your response in the lines below.* 
+
+
+  
+
+# Part 2: Multiple Regression    
+  
+## Question 5:  
+Now we can finally put all the pieces together from the experiment to answer one of our main questions! Essentially: how do encoding strategy, interference type, and imagery ability impact memory performance? Let’s try testing this out with a multiple regression! We will now turn to using the `class_data` (because we want to use some within subjects factors here).    
+
+Standardize all variables before including them in your regression. Add the standardized variables to “class_data” and call them “true_recall_proportion_z” and “vviq_z”. Output the first 10 rows of “class_data”.
+```{r}
+#class data
+```
+
+Using R built-in functions, calculate the multiple linear regression fit for a model with the following variables. Call this model "fit".  Output the summary of the model.  
+
+Variables:  
+a. Encoding strategy as a categorical IV (as 4 categories).  
+b. Interference type as a categorical IV.  
+c. VVIQ score as a continuous IV.  
+d. True recall performance as a continuous DV.    
+```{r}
+#fit
+```
+
+
+  
+## Question 6:  
+Report the best fit plane function from Question 5.
+*Please write your response in the lines below.* 
+
+
+  
+## Question 7:  
+Write code that partitions the variance by doing the following steps (parts a-c):
+
+*HINT - Continue to use the standardized variables when computing the SSE and onwards*
+
+### 7.a:  
+Calculate the sum of square errors (SSE) from scratch. Save this in a variable called “SSE” and output the value.
+```{r}
+#SSE
+```
+
+  
+### 7.b:  
+Calculate the sum of square regression (SSR) from scratch. Save this in a variable called “SSR” and output the value. 
+```{r}
+#SSR
+```
+
+  
+  
+### 7.c:  
+Calculate the sum of square total (SST) from scratch. Save this in a variable called “SST” and output the value.
+```{r}
+#SST
+```
+  
+  
+## Question 8:  
+Briefly describe: What do these variance components tell us about the amount of variance explained by the regression?
+*Please write your response in the lines below.* 
+
+
+
+## Question 9:  
+Write code that further partitions the variance using a reduced model. Show these calculations from scratch.
+
+### 9.a:  
+How much of the SSR is unique to encoding strategy? Call this variable “UniqueSSR_encoding_strategy” and output the value.
+```{r}
+#UniqueSSR_encoding_strategy
+```
+
+  
+### 9.b:  
+How much of the SSR is unique to VVIQ score? Call this variable “UniqueSSR_vviq” and output the value. 
+```{r}
+#UniqueSSR_vviq
+```
+  
+### 9.c:  
+How much of the SSR is shared between these two factors? Call this variable “Shared_SSR” and output the value. 
+```{r}
+#Shared_SSR
+```
+  
+  
+  
+## Question 10: 
+
+### 10.a:  
+Calculate R^2 goodness of fit **from scratch**. Save this in a variable called “Rsq” and output the value.
+```{r}
+#Rsq
+```
+
+  
+### 10.b:  
+Calculate Adjusted R^2 **from scratch**. Save this in a variable called “Adj_Rsq” and output the value. 
+```{r}
+#Adj_Rsq
+```
+
+Briefly discuss how the relationship between R^2 and Adjusted R^2 here relates to the ideal number of predictors in the model. 
+*Please write your response in the lines below.* 
+
+  
+### 10.c:  
+Calculate Cohen’s f2 for effect size **from scratch**. Save this in a variable called “cohen_fsq” and output the value.
+```{r}
+#cohen_fsq
+```
+  
+  
+### 10.d:  
+Calculate the F-statistic and corresponding p-value for overall model significance **from scratch**. Save these in separate variables called “F_stat” and “pval_F” and output these values.
+```{r}
+#F_stat
+#pval_F
+```
+
+
+  
+## Question 11:  
+Calculate these metrics using built-in R functions and and report those here. 
+```{r}
+
+```
+
+
+Additionally, calculate t-statistics and corresponding p-values for each predictor using built-in R functions.  
+```{r}
+#t_stat
+#pval_t
+```
+
+
+## Question 12:  
+Report all of the calculated information from the multiple regression as if reporting in a research paper.
+*Please write your response in the lines below.*  
+
+
+
+  
+## Question 13:  
+Re-run the model with a random effect of participant added. (Now you have a mixed effects model!). You can use built-in functions for this. Run your "model_updated".   
+
+```{r}
+#model_updated
+```
+
+
+### 13.a:  
+Describe why we would include a random effect of participant.   
+*Please write your response in the lines below.* 
+
+  
+### 13.b:  
+Report the best fit plane function of your new model.
+*Please write your response in the lines below.* 
+
+
+### 13.c:  
+Calculate (using built-in functions is fine) the beta, t-statistic, Standard Error (SE) for each predictor and their p-values.   
+
+*Hint: Since the standard lmer function does not provide p-values by default, we recommend using the lmerTest package. Simply loading it with library(lmerTest) before running your model will automatically add p-values to your summary() output.*  
+
+```{r}
+
+``` 
+  
+### 13.d:  
+Report the results (computed in 13.c)  as if reporting in a research paper.
+*Please write your response in the lines below.* 
+
+
+
+
+### 13.e:  
+Briefly discuss: How did your change(s) impact the weight of each predictor?
+*Please write your response in the lines below.* 
+
+
+
