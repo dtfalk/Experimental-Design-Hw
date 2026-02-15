@@ -111,7 +111,7 @@ bestfit_line = function(x_col, y_col, m_name, b_name) {
   y_diff <- y_col - mean_y
   
   # calculate m and b
-  m <- sum(x_diff * y_diff) / sum(x_diff ** 2)
+  m <- sum(x_diff * y_diff) / sum(x_diff ^ 2)
   b <- mean_y - (m * mean_x)
   
   bestfit <- data.frame(m, b)
@@ -152,7 +152,7 @@ plot(
      xlab = "VVIQ Score",
      ylab = "True Recall Proportion",
      xlim = c(0, max(vviq_scores)),
-     ylim = c(0, 1),
+     ylim = c(min(0, coefs_truerecall$b_truerecall), 1),
      main = "True Recall Proportion Against VVIQ Score"
 )
 abline(a = coefs_truerecall$b_truerecall[1],
@@ -170,7 +170,7 @@ plot(
      xlab = "VVIQ Score",
      ylab = "False Recall Proportion",
      xlim = c(0, max(vviq_scores)),
-     ylim = c(0, 1),
+     ylim = c(min(0, coefs_falserecall$b_falserecall), 1),
      main = "False Recall Proportion Against VVIQ Score"
 )
 abline(a = coefs_falserecall$b_falserecall[1],
@@ -217,8 +217,6 @@ calculate_residuals = function(x_col, y_col, coefs) {
 truerecall_resid_bestfit <- calculate_residuals(vviq_scores, trueRecall_scores, coefs_truerecall)
 
 # Print the data
-names(truerecall_resid_bestfit)
-str(truerecall_resid_bestfit)
 knitr::kable(
   head(truerecall_resid_bestfit, 10),
   caption = "True Recall Residuals (First 10 Rows)"
@@ -239,8 +237,8 @@ knitr::kable(
   
 For each best fit line, create a residuals plot.
 ```{r}
-overall_min_resid <- min(min(truerecall_resid_bestfit), min(falserecall_resid_bestfit))
-overall_max_resid <- max(max(truerecall_resid_bestfit), max(falserecall_resid_bestfit))
+overall_min_resid <- min(min(truerecall_resid_bestfit$residuals), min(falserecall_resid_bestfit$residuals))
+overall_max_resid <- max(max(truerecall_resid_bestfit$residuals), max(falserecall_resid_bestfit$residuals))
 plot(
      vviq_scores,
      jitter(truerecall_resid_bestfit$residuals),
@@ -249,7 +247,7 @@ plot(
      xlab = "VVIQ Score",
      ylab = "Residual",
      xlim = c(0, max(vviq_scores)),
-     ylim = c(min(vviq_scores), overall_max_resid),
+     ylim = c(overall_min_resid, overall_max_resid),
      main = "True Recall Residuals Against VVIQ Score"
 )
 ```
@@ -271,26 +269,58 @@ plot(
   
 For each residual plot, briefly discuss: Do you see any patterns here? What does this mean about the linear fit, based on what you do/don’t see in the residuals? 
 
-Regardless of vviq score the true recall residuals seem to vary around a mean of 0. Furthermore, the magnitude of the residuals do not seem to increase much as you progress along the x-axis (vviq score) so I would say that the true recall residuals are homoskedastic around a constant mean of 0. Since the mean always appears to be 0, this would suggest a slope and intercept near 0.     
+True recall residuals:
+The residuals seem to be randomly scattered around zero with roughly constant spread across VVIQ scores. There isn't a clear pattern or curvature. This suggests that the linear model is appropriate and that assumptions about linearity and homoskedasticity are reasonably satisfied.
 
-The false recall residuals have larger magnitudes to their variance, and it seems that vviq scores greater than ~70 lead to low residuals while vviq scores between 40 and 70 seem to be around 0 but perhaps with a slight positive slope in that range.It is hard to eyeball the slope of the fit since I cannot do the calculation in my head, but unless all of this variance cancels out then we would see a line with non-zero slop and non-zero intercept even if the mean remains 0. So I am less sure what exactly this will mean for this dataset, but I can imagine there could be effects on mean, slope and intercept stemming from increased variance.
+False recall residuals:
+The residuals are more variable and may there might be an effect of VVIQ score on residual, particularly at higher values. This could mean mild heteroskedasticity or a potential nonlinear relationship. However, there is no strong systematic pattern, so I think that the linear model is still reasonable, though the fit appears weaker than for true recall.
 
 
 
 ## Question 4:
 Calculate the best fit lines using a built-in R function. 
 ```{r}
-coefs_truerecallresid  <- lm()
-coefs_falserecallresid <-
-#best fit line for VVIQ & true recall proportion
+# Best fit line for VVIQ & true recall proportion
+
+# Get initial values (apparently not a dataframe)
+builtin_true  <- lm(trueRecall_scores ~ vviq_scores)
+
+# Convert data to dataframes
+builtin_coefs_truerecall  <- data.frame(
+                        m_truerecall = builtin_true$coefficients[2],
+                        b_truerecall = builtin_true$coefficients[1])
+
+# Log the results in line and equation form
+knitr::kable(
+  builtin_coefs_truerecall,
+  caption = "Line of Best Fit Data (True Recall)"
+)
+cat(sprintf("True Recall Line of Best Fit: y = %.6f * x + %.6f", builtin_coefs_truerecall$m_truerecall, builtin_coefs_truerecall$b_truerecall)
+)
 ```
   
 ```{r}
-#best fit line for VVIQ & false recall proportion
+# Best fit line for VVIQ & false recall proportion
+
+# Get initial values (apparently not a dataframe)
+builtin_false <- lm(falseRecall_scores ~ vviq_scores)
+
+# Convert data to dataframes
+builtin_coefs_falserecall <- data.frame(
+                        m_falserecall = builtin_false$coefficients[2],
+                        b_falserecall = builtin_false$coefficients[1])
+
+# Log the results in table and equation form
+knitr::kable(
+  builtin_coefs_falserecall,
+  caption = "Line of Best Fit Data (False Recall)"
+)
+cat(sprintf("False Recall Line of Best Fit: y = %.6f * x + %.6f", builtin_coefs_falserecall$m_falserecall, builtin_coefs_falserecall$b_falserecall)
+)
 ```
 
 How do these lines compare to the ones you calculated from scratch?
-*Please write your response in the lines below.* 
+The values for my function and the built-in function are identical.
 
 
   
@@ -302,7 +332,16 @@ Now we can finally put all the pieces together from the experiment to answer one
 
 Standardize all variables before including them in your regression. Add the standardized variables to “class_data” and call them “true_recall_proportion_z” and “vviq_z”. Output the first 10 rows of “class_data”.
 ```{r}
-#class data
+
+# Get z scored data for true recall and vviq
+# (seemed safest to calculate by hand)
+true_recall_proportion_z <- (trueRecall_scores - mean(trueRecall_scores)) / sd(trueRecall_scores) 
+vviq_z <- (vviq_scores - mean(vviq_scores)) / sd(vviq_scores)
+
+
+# Add values to class data
+class_data$true_recall_proportion_z <- true_recall_proportion_z
+class_data$vviq_z <- vviq_z
 ```
 
 Using R built-in functions, calculate the multiple linear regression fit for a model with the following variables. Call this model "fit".  Output the summary of the model.  
