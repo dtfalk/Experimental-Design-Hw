@@ -526,7 +526,10 @@ fit_interference_only <- lm(
 SSR_interference_only <- sum(predict(fit_interference_only) ^ 2)
 
 # Thinking in terms of ...
-# Total_SSR = All SSR in interference + SSR unique to encoding + encoding unique to VVIQ +
+# Total_SSR =
+#   All SSR in interference (including all overlaps with encoding, VVIQ, and encoding + VVIQ)
+# + SSR unique to encoding 
+# + encoding unique to VVIQ
 Shared_SSR <- (SSR - SSR_interference_only) -
               UniqueSSR_encoding_strategy -
               UniqueSSR_vviq
@@ -623,25 +626,27 @@ Calculate these metrics using built-in R functions and and report those here.
 # ==========================================================
 
 # R^2
-Rsq_builtin <- summary(fit)$r.squared
+builtin_Rsq <- summary(fit)$r.squared
 
 # Adjusted R^2
-Adj_Rsq_builtin <- summary(fit)$adj.r.squared
+builtin_Adj_Rsq <- summary(fit)$adj.r.squared
 
 # F statistic
-F_stat_builtin <- summary(fit)$fstatistic[1]
+builtin_F_stat <- summary(fit)$fstatistic[1]
 
 # F statistic p val
-pval_F_builtin <- pf(summary(fit)$fstatistic[1],
-                     summary(fit)$fstatistic[2],
-                     summary(fit)$fstatistic[3],
-                     lower.tail = FALSE)
+builtin_pval_F <- pf(summary(fit)$fstatistic[1],
+                    summary(fit)$fstatistic[2],
+                    summary(fit)$fstatistic[3],
+                    lower.tail = FALSE)
 
 # Print the results
-cat(sprintf("Built-in R^2: %.6f\n", Rsq_builtin))
-cat(sprintf("Built-in Adjusted R^2: %.6f\n", Adj_Rsq_builtin))
-cat(sprintf("Built-in F-statistic: %.6f\n", F_stat_builtin))
-cat(sprintf("Built-in p-value: %.6f", pval_F_builtin))
+cat(sprintf("Built In Functions Statistics\n"))
+cat(sprintf("=============================\n"))
+cat(sprintf("Built-in R^2: %.6f\n", builtin_Rsq))
+cat(sprintf("Built-in Adjusted R^2: %.6f\n", builtin_Adj_Rsq))
+cat(sprintf("Built-in F-statistic: %.6f\n", builtin_F_stat))
+cat(sprintf("Built-in p-value: %.6f", builtin_pval_F))
 ```
 
 
