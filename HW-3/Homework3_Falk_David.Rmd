@@ -537,12 +537,6 @@ Shared_SSR <- (SSR - SSR_interference_only) -
 
 # Print results
 cat(sprintf("SSR shared by ONLY encoding strategy and VVIQ: %.6f", Shared_SSR))
-
-
-
-
-
-
 ```
   
   
@@ -652,15 +646,41 @@ cat(sprintf("Built-in p-value: %.6f", builtin_pval_F))
 
 Additionally, calculate t-statistics and corresponding p-values for each predictor using built-in R functions.  
 ```{r}
-#t_stat
-#pval_t
+
+# Get the coefficients for each predictor
+coefficients_table <- summary(fit)$coefficients
+
+# Extract the column with the t statistics
+t_stat <- coefficients_table[, "t value"]
+
+# Extract the column with the p vals
+pval_t <- coefficients_table[, "Pr(>|t|)"]
+
+# Turn into a dataframe for nice printing :)
+t_p_table  <- data.frame(
+  predictor = rownames(coefficients_table),
+  t_Statistic = t_stat,
+  p_Value = pval_t,
+  row.names = NULL
+)
+
+# Print the results
+knitr::kable(
+    t_p_table, 
+    caption = "t-statistics and p-values for each predictor")
 ```
 
 
 ## Question 12:  
 Report all of the calculated information from the multiple regression as if reporting in a research paper.
-*Please write your response in the lines below.*  
 
+We computed a multiple linear regression to examine the extent to which encoding strategy, interference type, and VVIQ score (z scored) predicted true recall performance (z scored).
+
+The overall model was not statistically significant (F(6, 71) = 0.491, p = 0.813) and explained roughly 4% of the observed variance in true recall performance (R^2 = 0.0398, Adjusted R^2 = -0.0413).
+
+Furthermore, none of the individual predictors were statistically significant. Relative to the reference categories (imagery association for encoding strategy and control for interference type), no encoding condition achieved statistical significance (all p > 0.23, 3 predictors) and no interference type achieved statistical significance (all p > 0.28, 2 predictors). VVIQ (z scored) was not a significant predictor of recall either (t(71) = 0.392, p = 0.697).
+
+Effect size for the model was small (f^2 = 0.042) which suggests a small effect size and minimal explanatory power. Overall, the predictors included in the model did not meaningfully explain variation in true recall performance. 
 
 
   
