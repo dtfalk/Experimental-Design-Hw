@@ -692,8 +692,8 @@ library(lme4)
 library(lmerTest)
 
 # Calculate the mixed effects model 
-# Currently allows intercept to vary by participant (different baselines)
-# But keeps slopes for each participant fixed
+# Currently allows only the intercept (via "(1 | participant)") to vary by participant (different baselines) but keeps "slope" fixed for each participant
+# Need to check if they want to allow change in slope too (e.g. via "(1 + vviq_z | participant)" to allow different vviq effects per participant)
 model_updated <- lmer(
   true_recall_proportion_z ~ 
     encoding_strategy + interference_type + vviq_z +
