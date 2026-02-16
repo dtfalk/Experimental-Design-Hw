@@ -340,7 +340,7 @@ class_data$vviq_z <- scale(class_data$VVIQ_score)
 
 # Log the results
 knitr::kable(
-  class_data,
+  head(class_data, 10),
   caption = "Class Data (First 10 Rows)"
 )
 ```
@@ -576,7 +576,7 @@ cat(sprintf("Adjusted R^2: %.6f", Adj_Rsq))
 
 Briefly discuss how the relationship between R^2 and Adjusted R^2 here relates to the ideal number of predictors in the model. 
 
-Adjusted R^2 penalizes models that use more predictors because they could just be overfitting. In this case R^2 is small (0.04) and adjusted R^2 is negative (-0.04). This means that the predictors are not improving the model beyond what would be expected by change and that the model may be including more predictors than are justified given the amount of variance explained. 
+Adjusted R^2 penalizes models that use more predictors because they could just be overfitting. In this case R^2 is small (0.04) and adjusted R^2 is negative (-0.04). This means that after we penalize for the number of predictors, this model performs worse than if we just estimated true recall proportion from the intercept alone.
   
 ### 10.c:  
 Calculate Cohen’s f2 for effect size **from scratch**. Save this in a variable called “cohen_fsq” and output the value.
@@ -688,18 +688,66 @@ Effect size for the model was small (f^2 = 0.042) which suggests a small effect 
 Re-run the model with a random effect of participant added. (Now you have a mixed effects model!). You can use built-in functions for this. Run your "model_updated".   
 
 ```{r}
-#model_updated
+library(lme4)
+library(lmerTest)
+
+# Calculate the mixed effects model 
+# Currently allows intercept to vary by participant (different baselines)
+# But keeps slopes for each participant fixed
+model_updated <- lmer(
+  true_recall_proportion_z ~ 
+    encoding_strategy + interference_type + vviq_z +
+    (1 | participant),
+  data = class_data
+)
+
+# Display the summary stats
+summary(model_updated)
 ```
 
 
 ### 13.a:  
 Describe why we would include a random effect of participant.   
-*Please write your response in the lines below.* 
+
+We include a random effect of participant because each participant is responsible for multiple rows. These observations are not independent. In model_updated we are testing under the assumption that the effect of our other predictors are roughly constant across participants but that different participants may have different recall performance baselines. 
 
   
 ### 13.b:  
 Report the best fit plane function of your new model.
-*Please write your response in the lines below.* 
+Let's define some variables first...
+
+True Recall Proportion (z-scored):
+Denote this as TRP_z
+
+Encoding Strategy:
+Reference Category: imag_association
+Let ES_1 = 1 if imag_single, 0 otherwise (coefficient = "B_1")
+Let ES_2 = 1 if verb_association, 0 otherwise (coefficient = "B_2")
+Let ES_3 = 1 if verb_single, 0 otherwise (coefficient = "B_3")
+
+Interference Type:
+Reference Category : control
+Let IT_1 = 1 if verbal, 0 otherwise (coefficient = "B_4")
+Let IT_2 = 1 if visual, 0 otherwise (coefficient = "B_5")
+
+VVIQ Score (z-scored):
+Denote this as VVIQ_z (coefficient = "B_6")
+
+Random Effect of Participant:
+Denote the random intercept for participant j as u_j
+u_j ~ N(0, 0.8295)
+
+Residual Error:
+Denote this as e_ij
+e_ij ~ N(0, 0.3053)
+
+Now our plane equation is...
+
+TRP_z_ij = Intercept + (B_1 * ES_1) + (B_2 * ES_2) + (B_3 * ES_3) + (B_4 * IT_1) + (B_5 * IT_2) + (B_6 * VVIQ_z) + u_j + e_ij
+
+and plugging in values for the B_i's we get...
+
+TRP_z_ij = 0.35264 + (-0.39064 * ES_1) + (-0.10819 * ES_2) + (-0.19955 * ES_3) + (-0.30219 * IT_1) + (-0.24823 * IT_2) + (0.05359 * VVIQ_z) + u_j + e_ij
 
 
 ### 13.c:  
@@ -708,19 +756,43 @@ Calculate (using built-in functions is fine) the beta, t-statistic, Standard Err
 *Hint: Since the standard lmer function does not provide p-values by default, we recommend using the lmerTest package. Simply loading it with library(lmerTest) before running your model will automatically add p-values to your summary() output.*  
 
 ```{r}
+# Extract fixed effects table from summary
+coef_table <- summary(model_updated)$coefficients
+
+# Put into a dataframe with the requested stats
+mixed_table <- data.frame(
+  predictor = rownames(coef_table),
+  beta = coef_table[, "Estimate"],
+  SE = coef_table[, "Std. Error"],
+  t_statistic = coef_table[, "t value"],
+  p_value = coef_table[, "Pr(>|t|)"],
+  row.names = NULL
+)
+
+# Output table
+knitr::kable(
+  mixed_table,
+  caption = "Mixed Effects Model: Betas, SEs, t-statistics, and p-values"
+)
 
 ``` 
   
 ### 13.d:  
 Report the results (computed in 13.c)  as if reporting in a research paper.
-*Please write your response in the lines below.* 
 
+We computed a linear mixed effects model to examine whether encoding strategy, interference type, and VVIQ score (z scored) predicted true recall performance (z scored), while including a random intercept for participant.
 
+The intercept was not statistically significant (b = 0.35264, SE = 0.41033, t(23.07) = 0.859, p = 0.3990). Relative to the reference category imag_association, none of the encoding strategy conditions significantly predicted true recall (imag_single: b = -0.39064, SE = 0.53799, t(21) = -0.726, p = 0.4758; verb_association: b = -0.10819, SE = 0.55090, t(21) = -0.196, p = 0.8462; verb_single: b = -0.19955, SE = 0.69664, t(21) = -0.286, p = 0.7773).
+
+Relative to the control interference condition, interference_typeverbal was marginal (b = -0.30219, SE = 0.15324, t(50) = -1.972, p = 0.0542), while interference_typevisual was not significant (b = -0.24823, SE = 0.15324, t(50) = -1.620, p = 0.1115). VVIQ_z was not a significant predictor of true recall (b = 0.05359, SE = 0.22417, t(21) = 0.239, p = 0.8134).
+
+The model included a random intercept for participant (variance = 0.8295, SD = 0.9108), with residual variance = 0.3053 (SD = 0.5525).
 
 
 ### 13.e:  
 Briefly discuss: How did your change(s) impact the weight of each predictor?
-*Please write your response in the lines below.* 
 
+
+Adding the random intercept for participant did not change the fixed effect beta weights compared to the original regression (the estimates for encoding strategy, interference type, and VVIQ_z are the same). The main impact is that the model now explicitly accounts for within-participant dependence by allowing each participant to have their own baseline recall level. In this fit, between-participant variability is substantial (random intercept variance = 0.8295) relative to the residual variance (0.3053), which suggests that a lot of the variability in recall is due to stable differences between participants rather than changes driven by the fixed predictors. 
 
 
