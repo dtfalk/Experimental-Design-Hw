@@ -1,0 +1,431 @@
+---
+title: "Homework 4"
+author: "David"
+date: "`r Sys.time()`"
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+<!---
+In order to check that all the necessary packages are installed, Click the File > New File > R Markdown button and keep all of the options as is. Save the document somewhere, and, while that new document is open, click the knit button. If a window with some plots shows up, everything is installed correctly. If RStudio prompts you to install any packages, you should install them.
+-->
+
+<!---
+Please save this file as Homework4_lastname_firstname.Rmd
+
+Be sure to update the author field in the block above.
+-->
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)  
+library(car)
+library(ggpubr)
+library(psych)
+library(knitr)
+
+set.seed(1) 
+theme_set(theme_minimal())
+
+```
+
+# Part 0: Importing Data  
+
+Import the “participant_level_data_HW4.csv” dataframe supplied on Canvas.
+```{r}
+participant_data <- read.csv(file.path("data", "participant_level_data_HW4.csv"))
+```
+
+
+   
+# Part 1: Correlations 
+  
+## Question 1:  
+
+Calculate a correlation between “true_recall_proportion” and “false_recall_proportion” from scratch, save the correlation coefficient as “corr_coef” and output this value.  
+
+```{r}
+
+# Pearson is just cov(x,y) / (sd_x * sd_y)
+
+# Get the data
+true_recall_values <- participant_data$true_recall_proportion
+false_recall_values <- participant_data$false_recall_proportion
+
+# Get means
+true_mean <- mean(true_recall_values)
+false_mean <- mean(false_recall_values)
+
+# Center data around mean to make cov calculatin easier
+true_centered <- true_recall_values - true_mean
+false_centered <- false_recall_values - false_mean
+
+# Get standard devs
+true_sd <- sd(true_recall_values)
+false_sd <- sd(false_recall_values)
+
+# Get covariance
+covariance <- sum(true_centered * false_centered) / (length(true_recall_values) - 1)
+
+# Get correlation coefficient
+corr_coeff <- covariance / (true_sd * false_sd)
+
+# Log the results
+cat(sprintf("Correlation Coefficient (True Recall & False Recall): %.6f", corr_coeff))
+
+
+
+```
+
+  
+## Question 2:  
+
+Let’s see how our continuous variables relate to each other. Create and show a correlation matrix comparing the following values. You can use built-in functions to calculate correlations.  
+
+a. True recall proportion  
+b. False recall proportion  
+c. VVIQ score  
+
+```{r}
+
+# Get all the columns of interest
+relevant_columns <- participant_data[, c("true_recall_proportion",
+                                         "false_recall_proportion",
+                                         "VVIQ_score")]
+
+# Get the correlation matrix
+correlation_matrix <- cor(relevant_columns)
+
+# Log the results
+knitr::kable(
+  correlation_matrix,
+  caption = "Correlation Matrix for True Recall Proportion, False Recall Proportion, and VVIQ Score"
+)
+
+```
+
+*Briefly discuss: Describe the significant relationships you see in this matrix*
+  The diagonal (top left to bottom right) is always exactly 1 because every variable relates perfectly to itself. The matrix is also symmetric across the diagonal as it shows each relationship twice. True recall has a 0.14 relationship with false recall, and this is the strongest correlation between these three variables. VVIQ and true recall have a near zero correlation. VVIQ and false recall share a negative relationship of a similar magnitude as true recall and false recall.
+
+
+
+# Part II: Cross Validation  
+  
+## Question 3:  
+
+Perform a hold-out cross-validation of the mixed effects regression model you made in HW 3, Part II, Question 13. 
+
+### 3.a:  
+Set your seed to 2026. Split your data randomly into 80% training / 20% testing. Output the first 10 rows of the test and training datasets.   
+```{r}
+
+# Load libs
+library(lme4)
+library(lmerTest)
+
+# Load class data
+class_data <- read.csv(file.path("data", "class_data.csv"))
+
+# Standardize variables
+class_data$true_recall_proportion_z <- as.numeric(scale(class_data$true_recall_proportion))
+class_data$vviq_z <- as.numeric(scale(class_data$VVIQ_score))
+
+# Convert predictors to factors
+class_data$encoding_strategy <- as.factor(class_data$encoding_strategy)
+class_data$interference_type <- as.factor(class_data$interference_type)
+class_data$participant <- as.factor(class_data$participant)
+
+# Get unique participant IDs
+participant_ids <- unique(class_data$participant)
+num_participants <- length(participant_ids)
+
+# Set the seed
+set.seed(2026)
+
+# Number of splits we will do and test/train fractions
+num_splits <- 1000
+train_fraction <- 0.80
+test_fraction <- 0.20
+
+# Get number of participants in training set
+num_train_participants <- floor(train_fraction * num_participants)
+
+# Randomly select training participants (we gonna use it as a mask)
+train_participants <- sample(participant_ids,
+                             size = num_train_participants,
+                             replace = FALSE)
+
+# Create training and testing datasets
+training_data <- class_data[class_data$participant %in% train_participants, ]
+testing_data  <- class_data[!(class_data$participant %in% train_participants), ]
+
+# Output first 10 rows
+head(training_data, 10)
+head(testing_data, 10)
+
+```
+  
+### 3.b:  
+Use the training data to determine the best fit model and output the summary.
+```{r}
+
+# Mixed effects model from HW3
+mixed_model_training <- lmer(
+  true_recall_proportion_z ~
+    encoding_strategy +
+    interference_type +
+    vviq_z +
+    (1 | participant),
+  data = training_data
+)
+
+# Print da results
+summary(mixed_model_training)
+```
+  
+### 3.c:  
+Calculate the model accuracy with the testing data (to measure performance, let’s use r, the correlation between the predictions and true values).   
+```{r}
+
+# Get the predicted values
+predicted_test_values <- predict(
+  mixed_model_training,
+  newdata = testing_data,
+  allow.new.levels = TRUE
+)
+
+# Calculate correlation between predicted and actual values
+test_r <- cor(predicted_test_values,
+              testing_data$true_recall_proportion_z)
+
+cat(sprintf("Test-set correlation (r): %.6f\n", test_r))
+```
+
+  
+### 3.d:  
+Conduct this cross-validation over 1000 splits. Call the list of resulting model accuracy values cv_r. Set the seed to 2026 before starting your 1000 splits   
+```{r}
+
+# Set the seed
+set.seed(2026)
+
+# Intialize empty list of proper size
+cv_r <- rep(NA, num_splits)
+
+# Iterate number of time we do the split
+for (split_index in 1:num_splits) {
+
+  # Get number of training participants
+  num_train_participants <- floor(train_fraction * num_participants)
+  
+  # Get the ids for the participants that will be in training set
+  train_participants <- sample(participant_ids,
+                               size = num_train_participants,
+                               replace = FALSE)
+  
+  # Get training and testing data
+  training_data <- class_data[class_data$participant %in% train_participants, ]
+  testing_data  <- class_data[!(class_data$participant %in% train_participants), ]
+  
+  # Train that sucker 
+  mixed_model_training <- lmer(
+    true_recall_proportion_z ~
+      encoding_strategy +
+      interference_type +
+      vviq_z +
+      (1 | participant),
+    data = training_data,
+  )
+  
+  # Predict them values
+  predicted_test_values <- predict(
+    mixed_model_training,
+    newdata = testing_data,
+    allow.new.levels = TRUE
+  )
+
+  # Calculate correlation between predicted and actual values
+  test_r <- cor(predicted_test_values, testing_data$true_recall_proportion_z)
+  
+  # Insert the correlation coefficient in the proper index
+  cv_r[split_index] <- test_r
+}
+```
+
+  
+### 3.e:  
+Plot a histogram of your model accuracy values and report the mean model accuracy. Also save the mean model accuracy to a variable called `mean_cv_r`. 
+```{r}
+
+# Get a little histogram action goin
+hist(cv_r,
+     main = "Cross-Validation Accuracy (80/20)",
+     xlab = "Model Accuracy (r)")
+
+# Get mean of the cross validation r values
+mean_cv_r <- mean(cv_r)
+
+# Print it
+cat(sprintf("Mean Cross-Validation Accuracy (80/20): %.6f\n", mean_cv_r))
+```
+
+  
+### 3.f:  
+Transform the r values with a Fisher Z-transformation (call this cv_z) and conduct a Nadeau-Bengio-corrected t-test of the values versus 0. Save the results in a variable called `cv_t`.
+```{r}
+
+bengio.t.test <- function(results, nperm, ntrain, ntest, alternative="two.sided") {
+  
+  m = mean(results)
+  var_res = sd(results)**2
+  adjusted_var = ((1/nperm) + (ntest/ntrain))*var_res
+  
+  t = m / sqrt(adjusted_var)
+  
+  df = nperm - 1
+  
+  # There are lots of ways to get to p-values from here
+  if (alternative=="less") {
+    pval = pt(t, df=df) 
+  } else if (alternative=="greater") {
+    pval = 1 - pval
+  } else if (alternative=="two.sided") {
+    pval = pt(abs(t), df=df, lower.tail=F) * 2
+  }
+  
+  return(data.frame(t=t, pval=pval, df=df))
+}
+
+```
+
+```{r}
+
+# Write your code here
+
+```
+  
+### 3.g:  
+*Briefly discuss: Interpret the resulting t-test and p-value. What does this say about your model?*   
+  
+  
+ 
+  
+## Question 4:  
+Conduct a hold-out cross-validation of your model the same as above, but with 50% training and 50% testing. Set the seed to 2026 before starting and then save the model accuracy results in a variable called `cv_r_half`.  
+
+```{r}
+
+set.seed(2026)
+
+```
+
+### 4.a:
+*Briefly discuss: How does the ability of your model to extend to other data change? What does this say about the ideal distribution of training and testing data?*  
+  
+
+# Part III: ANOVAs  
+  
+## Question 5:  
+This study was designed to be analyzed with an ANOVA (it’s originally designed for a 3-way ANOVA, but let’s start simpler with a 2-way ANOVA). In particular, let’s see how VVIQ score (imagery ability) interacts with encoding depth to impact memory performance. First, we need to make a categorical version of the VVIQ. Create a new column in the dataframe called vviq_level where it is 1 if the participant’s VVIQ score is equal to or higher than the median score across participants, and 0 if it is lower than the median score across participants.  
+
+Calculate a 2-way independent samples ANOVA with the DV as true recall performance, and the IVs varying along 2 factors: 1) vviq (categorical, as low / high) and 2) encoding strategy depth (categorical, as deep / shallow).
+
+### 5.a:  
+Calculate Sum of Squares for vviq from scratch. Call this *SS_vviq* and output this value.  
+```{r}
+
+```
+
+  
+### 5.b:  
+Calculate Sum of Squares for strategy from scratch. Call this *SS_strategy* and output this value.  
+```{r}
+
+```
+
+  
+### 5.c:  
+Calculate Sum of Squares total from scratch. Call this *SS_total* and output this value.  
+```{r}
+
+```
+
+  
+### 5.d:  
+Calculate Sum of Squares within from scratch. Call this *SS_within* and output this value.  
+```{r}
+
+```
+
+
+
+## Question 6:  
+Write code that generates an ANOVA table that uses the format from the HW 4 instructions document, and populate it using your calculations. Calculate MS and F from scratch. The p-values can be calculated with built-in R functions. Output this table.  
+(hint: feel free to use knitr::kable)
+
+**For the five cells that have a “--” in the HW instructions, leave these in your dataframe as “NA”s.**  
+
+```{r}
+```
+
+
+  
+## Question 7:  
+Create a bar graph showing the means of the 4 different conditions (2 VVIQ levels x 2 strategy types), and mark significance for the factors/interactions on this plot. 
+```{r}
+
+```
+
+  
+  
+## Question 8:  
+Calculate effect size (partial eta squared) for each factor and the interaction from scratch. Call these: `eta_vviq_level`, `eta_strategy`, and `eta_interaction` and output these values.  
+```{r}
+
+```
+  
+  
+  
+## Question 9:  
+Describe the statistics for each factor, their interaction, and the effect sizes as if for a research paper, referring to this bar graph. Include interpretation of the results.  
+
+*Please write your response in the lines below.*  
+  
+
+  
+## Question 10:  
+Calculate this ANOVA using R built-in functions to check your numbers.  
+```{r}
+
+```
+  
+
+
+## Question 11:  
+Calculate this ANOVA instead as a within-subjects (repeated measures) ANOVA using R built-in functions. Save the results in a variable called anova_within and display the statistic and p values for each factor and their interaction.  
+```{r}
+
+```
+
+*Briefly discuss: How do the results change when instead using a repeated measures ANOVA? What is the correct function to use?*  
+  
+  
+
+# Part IV: ANOVA as regression  
+
+
+## Question 12:
+Write the independent samples ANOVA as a regression model, and report the regression model formula. (Remember that VVIQ and encoding strategy are now categorical, not continuous.)  
+```{r}
+
+```
+
+
+
+## Question 13:  
+Conduct the regression model using R built-in functions. How do the outputs of this model compare to those of the ANOVA?
+```{r}
+```

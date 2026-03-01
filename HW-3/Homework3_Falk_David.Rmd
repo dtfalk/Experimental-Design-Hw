@@ -295,8 +295,7 @@ knitr::kable(
   builtin_coefs_truerecall,
   caption = "Line of Best Fit Data (True Recall)"
 )
-cat(sprintf("True Recall Line of Best Fit: y = %.6f * x + %.6f", builtin_coefs_truerecall$m_truerecall, builtin_coefs_truerecall$b_truerecall)
-)
+cat(sprintf("True Recall Line of Best Fit: y = %.6f * x + %.6f", builtin_coefs_truerecall$m_truerecall, builtin_coefs_truerecall$b_truerecall))
 ```
   
 ```{r}
