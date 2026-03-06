@@ -26,6 +26,8 @@ library(car)
 library(ggpubr)
 library(psych)
 library(knitr)
+library(lme4)
+library(lmerTest)
 
 set.seed(1) 
 theme_set(theme_minimal())
@@ -121,10 +123,6 @@ Perform a hold-out cross-validation of the mixed effects regression model you ma
 ### 3.a:  
 Set your seed to 2026. Split your data randomly into 80% training / 20% testing. Output the first 10 rows of the test and training datasets.   
 ```{r}
-
-# Load libs
-library(lme4)
-library(lmerTest)
 
 # Load class data
 class_data <- read.csv(file.path("data", "class_data.csv"))
