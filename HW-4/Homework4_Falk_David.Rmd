@@ -344,7 +344,7 @@ knitr::kable(
   
 ### 3.g:  
 *Briefly discuss: Interpret the resulting t-test and p-value. What does this say about your model?*   
-Across 1000 splits the mean predictive accuracy was negative (mean r = −0.311561). After Fisher Z-transforming the r values, the Nadeau-Bengio corrected t-test against 0 was significant (t(999) = -2.501, p = 0.125). This suggests the model’s out-of-sample predictions are reliably worse than zero association on average (it tends to predict in the opposite direction), which means poor generalization performance or I made a code error.
+Across 1000 splits the mean predictive accuracy was negative (mean r = −0.311561). After Fisher Z-transforming the r values, the Nadeau-Bengio corrected t-test against 0 was significant (t(999) = -2.501, p = 0.0125). This suggests the model’s out-of-sample predictions are reliably worse than zero association on average, which means poor generalization performance, or depending on if this model is sufficiently predictive in the wrong direction, we could use this model and just take the opposite of what it predicts.
   
  
   
@@ -673,7 +673,7 @@ cat(sprintf("Partial eta^2 (Interaction): %.6f\n", eta_interaction))
 ## Question 9:  
 Describe the statistics for each factor, their interaction, and the effect sizes as if for a research paper, referring to this bar graph. Include interpretation of the results.  
 
-A 2×2 independent-samples ANOVA was used to examine true recall as a function of VVIQ level (low vs. high) and encoding depth (shallow vs. deep). There was no main effect of VVIQ level (F(1, 32) = 0.077, p = 0.783, eta^2 = 0.002412). There was also no main effect of strategy depth (F(1, 32) = 0.456, p = 0.504, eta^2 = 0.0141). The VVIQ and strategy depth interaction flirted with significance (F(1, 32) = 3.341, p = 0.0769, eta^2 = 0.0945). Given the critical nature of this research and its potential humanitarian impact, we believe that a 5-year 2.7 million dollar grant would be appropriate to collect more data, run further analyses, and do everything in our power to ensure we get this p value below 0.05. As shown in the bar graph, the pattern of means suggests the effect of encoding depth may differ by imagery ability, but the evidence is not strong enough to conclude that there is a reliable interaction at an alpha level of 0.05. With further financial support, our team is confident we will fix this.
+A 2×2 independent-samples ANOVA was used to examine true recall as a function of VVIQ level (low vs. high) and encoding depth (shallow vs. deep). There was no main effect of VVIQ level (F(1, 32) = 0.077, p = 0.783, eta^2 = 0.002412). There was also no main effect of strategy depth (F(1, 32) = 0.456, p = 0.504, eta^2 = 0.0141). The VVIQ and strategy depth interaction flirted with significance (F(1, 32) = 3.341, p = 0.0769, eta^2 = 0.0945). Given the critical nature of this research and its potential humanitarian impact, we believe that a 5-year 2.7 million dollar grant would be appropriate to collect more data, run further analyses, and do everything in our power to ensure we get this p value below 0.05. As shown in the bar graph, the pattern of means suggests the effect of encoding depth may differ by imagery ability, but the evidence is not strong enough to conclude that there is a reliable interaction at an alpha level of 0.05. With further financial support, our team is confident we can fix this.
 
   
 ## Question 10:  
@@ -753,7 +753,7 @@ knitr::kable(
 
 *Briefly discuss: How do the results change when instead using a repeated measures ANOVA? What is the correct function to use?*  
 
-When switching to the repeated-measures ANOVA (with interference type as the within-subject factor), the conclusions are mostly similar in that effects are not (yet) statistically significant. For between-subject effects, VVIQ level was not significant (p = 0.734), encoding strategy was not significant (p = 0.863), and their interaction was not significant (p = 0.123).
+When switching to the repeated-measures ANOVA (with interference type as the within-subject factor), the conclusions are mostly similar in that effects are not statistically significant. For between-subject effects, VVIQ level was not significant (p = 0.734), encoding strategy was not significant (p = 0.863), and their interaction was not significant (p = 0.123).
 
 For within-subject effects, interference type was not significant (p = 0.110), and none of the interactions with interference type were significant (e.g. VVIQ against interference type had a p value of 0.080). 
 

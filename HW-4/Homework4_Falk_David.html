@@ -351,7 +351,7 @@ display: none;
 
 <h1 class="title toc-ignore">Homework 4</h1>
 <h4 class="author">David Falk</h4>
-<h4 class="date">2026-03-01 13:08:33.278781</h4>
+<h4 class="date">2026-03-06 17:34:04.995386</h4>
 
 </div>
 
@@ -541,23 +541,6 @@ model you made in HW 3, Part II, Question 13.</p>
 <p>Set your seed to 2026. Split your data randomly into 80% training /
 20% testing. Output the first 10 rows of the test and training
 datasets.</p>
-<pre class="r"><code># Load libs
-library(lme4)</code></pre>
-<pre><code>## Loading required package: Matrix</code></pre>
-<pre><code>## 
-## Attaching package: &#39;Matrix&#39;</code></pre>
-<pre><code>## The following objects are masked from &#39;package:tidyr&#39;:
-## 
-##     expand, pack, unpack</code></pre>
-<pre class="r"><code>library(lmerTest)</code></pre>
-<pre><code>## 
-## Attaching package: &#39;lmerTest&#39;</code></pre>
-<pre><code>## The following object is masked from &#39;package:lme4&#39;:
-## 
-##     lmer</code></pre>
-<pre><code>## The following object is masked from &#39;package:stats&#39;:
-## 
-##     step</code></pre>
 <pre class="r"><code># Load class data
 class_data &lt;- read.csv(file.path(&quot;data&quot;, &quot;class_data.csv&quot;))
 
@@ -886,11 +869,12 @@ Accuracy</caption>
 does this say about your model?</em><br />
 Across 1000 splits the mean predictive accuracy was negative (mean r =
 −0.311561). After Fisher Z-transforming the r values, the Nadeau-Bengio
-corrected t-test against 0 was significant (t(999) = -2.501, p = 0.125).
-This suggests the model’s out-of-sample predictions are reliably worse
-than zero association on average (it tends to predict in the opposite
-direction), which means poor generalization performance or I made a code
-error.</p>
+corrected t-test against 0 was significant (t(999) = -2.501, p =
+0.0125). This suggests the model’s out-of-sample predictions are
+reliably worse than zero association on average, which means poor
+generalization performance, or depending on if this model is
+sufficiently predictive in the wrong direction, we could use this model
+and just take the opposite of what it predicts.</p>
 </div>
 </div>
 <div id="question-4" class="section level2">
@@ -1307,7 +1291,7 @@ value below 0.05. As shown in the bar graph, the pattern of means
 suggests the effect of encoding depth may differ by imagery ability, but
 the evidence is not strong enough to conclude that there is a reliable
 interaction at an alpha level of 0.05. With further financial support,
-our team is confident we will fix this.</p>
+our team is confident we can fix this.</p>
 </div>
 <div id="question-10" class="section level2">
 <h2>Question 10:</h2>
@@ -1549,10 +1533,10 @@ knitr::kable(
 repeated measures ANOVA? What is the correct function to use?</em></p>
 <p>When switching to the repeated-measures ANOVA (with interference type
 as the within-subject factor), the conclusions are mostly similar in
-that effects are not (yet) statistically significant. For
-between-subject effects, VVIQ level was not significant (p = 0.734),
-encoding strategy was not significant (p = 0.863), and their interaction
-was not significant (p = 0.123).</p>
+that effects are not statistically significant. For between-subject
+effects, VVIQ level was not significant (p = 0.734), encoding strategy
+was not significant (p = 0.863), and their interaction was not
+significant (p = 0.123).</p>
 <p>For within-subject effects, interference type was not significant (p
 = 0.110), and none of the interactions with interference type were
 significant (e.g. VVIQ against interference type had a p value of
