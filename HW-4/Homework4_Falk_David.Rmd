@@ -9,6 +9,11 @@ output:
     toc: yes
 ---
 <!---
+
+I completed this homework using the class data dataset for various questions since I completed this homework before the announcement was made. I was told on Slack to leave a note at the top of this homework about this.
+
+
+
 In order to check that all the necessary packages are installed, Click the File > New File > R Markdown button and keep all of the options as is. Save the document somewhere, and, while that new document is open, click the knit button. If a window with some plots shows up, everything is installed correctly. If RStudio prompts you to install any packages, you should install them.
 -->
 
@@ -33,11 +38,15 @@ set.seed(1)
 theme_set(theme_minimal())
 
 ```
-
 # Part 0: Importing Data  
 
 Import the “participant_level_data_HW4.csv” dataframe supplied on Canvas.
 ```{r}
+# I completed this homework using the class data dataset for various questions since I completed this homework before the announcement was made. I was told on Slack to leave a note at the top of this homework about this.
+
+
+
+
 participant_data <- read.csv(file.path("data", "participant_level_data_HW4.csv"))
 ```
 
