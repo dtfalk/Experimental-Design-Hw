@@ -1,0 +1,989 @@
+---
+title: "HW_2 SP2026 ExpDes_StatMod_2"
+author: David Falk
+output: html_document
+---
+Due: Friday, April 24 at 11:59pm
+
+Points: 244
+
+Topics: Linear and Polynomial Regression, Multiple Regression, Causal Modeling
+
+Please turn in this assignment on Canvas.  You should turn in your .Rmd file, i.e., your R markdown file, as well as the corresponding .html or .pdf file (i.e., the knitted Rmarkdown file). 
+
+**If you worked with someone on these homework please list them here:**
+
+Worked with: NA
+
+
+AI disclosure. In 150 words or less, please describe how you used AI on this assignment. You can have the AI that you used generate how it was used for this assignment:   
+Used AI for 0.Used it to screw up my computer and then unscrewup my computer. I am grateful the AI can do both. I used VS Code last week and messed up my R env system in the process. 1. Remembering dagitty syntax for coordinates 2. Double checking my linear algebra setup for 3F (design matrix with cubic term no squared term) 3. Sanity checkinginterpretation the Simpson's paradox result in Q9. All writing/interpretation is mine.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+library(tidyverse)
+library(tidyr)
+library(brms)
+library(sjPlot)
+library(ggpubr)
+library(RColorBrewer)
+library(cowplot)
+library(modelr)
+library(gridExtra)
+library(tidybayes)
+library(rethinking)
+library(gtools)
+library(cmdstanr)
+library(ggplot2)
+library(dplyr)
+library(reshape)
+library(lme4)
+library(rstatix)
+library(dagitty)
+
+set.seed(1)  # Ensures reproducible results
+
+theme_set(theme_minimal())  # My personal preference for less ugly default plots
+```
+
+# Question 1: Inferential uncertainty
+
+## Q1A. People often confuse confidence intervals around the mean (inferential stats) vs. confidence intervals around individual observations and think the intervals around the mean applies to individual observations.  According to Zhang et al. (2023), does this cause people to over- or under-estimate their effect sizes?  (2 points)  
+*Write your answer in the lines below:*
+
+They overestimate their effect sizes. The CI around the mean shrinks as you add more data (SE = standard_dev/sqrt(n)), so the interval around the mean is always narrower than the actual variation in the data. If you confuse the two then you might end up thinking the separation between conditions is cleaner than it really is at the level of individual people.
+
+
+## Q1B. Related to this, does this confusion lead people to over- or under-estimate how predictive their models are at predicting individual observations? (2 points)  
+*Write your answer in the lines below:*
+
+Overestimate. If you read a narrow CI around the mean as if it tells you where individual observations will land, then you think your model is nailing individual predictions when really its only telling you about where the average sits. The actual interval of interest for a single observation is much wider than the CI around the mean because SE is just sigma divided by sqrt(n) and any time n > 1 you have that mean +- SE is a strict subset of mean +- sigma.
+
+
+
+# Question 2: Interpreting Posteriors
+
+The following code produces the figure 4.10 from McElreath.
+
+```{r}
+
+# Loading in Howell1
+data(Howell1)
+
+# Assign it to d
+d <- Howell1 
+
+# Restrict to adults
+d2 <- d[d$age >= 18, ]
+
+# Let xbar be the mean weight
+xbar <- mean(d2$weight)
+
+# Center weights around the mean
+d2$centered_weights<-d2$weight - xbar
+
+
+# Fit model
+# ==========================================================================
+# Set the seed for reproducability
+set.seed(2026)
+
+# Fit model via quap
+m4.3 <- quap(
+    alist(
+        
+        # Let height be modelled around a normal distribution of mean mu
+        #   and standard deviation sigma
+        height ~ dnorm(mu , sigma),
+        
+        # Let mean mu be given by some degree one polypomial of the form...
+        #   weight * weight_height_slope + intercept
+        mu <- a + b * (centered_weights),
+        
+        # Let's guess some vaguely average height for the intercept
+        #   as the intercept (x = 0) is when weight is average
+        a ~ dnorm(178 , 20),
+        
+        # Get the slope as log normal dist (right skewed) w log(mean) = 0 and log(std) = 1
+        b ~ dlnorm(0 , 1),
+        
+        # Let std be from uniform distribution with min 0 and max 50
+        # so we get pdf(x) = 1 / 50
+        sigma ~ dunif(0 , 50)
+    ) , data = d2)
+# ==========================================================================
+
+# define sequence of weights to compute predictions for
+# these values will be on the horizontal axis
+# So create a list (-20, -19, -18, ..., 18, 19, 20) and use it to 
+#   mimic centered weights
+weight.seq <- seq(from = -20 , to = 20 , by = 1)
+
+# Simulate posterior observations using the quap model and with the
+sim.height <- sim(m4.3, data = list(centered_weights = weight.seq))
+
+height.PI <- apply(sim.height, 2, PI, prob = 0.89)
+
+
+# use link to compute mu
+# for each sample from posterior
+# and for each weight in weight.seq
+mu <- link( m4.3 , data=data.frame(centered_weights=weight.seq) )
+
+# summarize the distribution of mu
+mu.mean <- apply( mu , 2 , mean )
+mu.PI <- apply( mu , 2 , PI , prob=0.89 )
+mu.HPDI <- apply(mu, 2, HPDI)
+
+# plot heighs vs. centered weights
+plot( height ~ centered_weights, d2 , col=col.alpha(rangi2,0.5))
+
+# draw MAP line
+lines( weight.seq , mu.mean )
+
+# draw HPDI region for line
+shade( mu.HPDI , weight.seq )
+
+# draw PI region for simulated heights
+shade( height.PI , weight.seq )
+
+```
+
+## Q2A. What does the narrower shaded interval represent?  
+*Write your answer in the lines below:*
+
+The narrower band is the HPDI for mu, so it is the uncertainty around the mean height at each weight. It tells you where the regression line itself most plausibly sits given the data, not where individual people are.
+
+
+
+## Q2B. What does the wider shaded interval represent?  
+*Write your answer in the lines below:*
+
+The wider band is the 89% PI of simulated heights, which is the predictive interval for individual observations. It captures uncertainty in the mean PLUS the sigma noise around the line, so it's where you'd expect an actual person's height to land at a given weight.
+
+
+
+## Q2C. What makes the narrower interval narrower, and the wider interval wider?  
+*Write your answer in the lines below:*
+
+The narrower one only reflects uncertainty in the posterior over a and b (the line itself). As you add more data that uncertainty shrinks and the interval gets tighter. The wider one has to include sigma on top of that, which is the variation of individuals around the mean, and that does NOT shrink when you add more data. So one is about "where is the line" (shrinks with n) and the other is "where are people" (bounded below by sigma).
+
+
+
+## Q2D. The posterior distribution has how many parameters in it?  What do those parameters describe?  
+*Write your answer in the lines below:*
+
+3 parameters: a, b, and sigma.
+a is the intercept, which with centered weight is the mean height of an adult at the average weight.
+b is the slope, the expected change in height for a one kg increase in weight.
+sigma is the std of heights around the regression line, i.e. how much individual heights deviate from the predicted mean at a given weight.
+
+
+
+# Question 3: Predicting Height from Weight  
+
+The following code (modified from 4.65 in McElreath) creates a model that predicts height from weight.
+
+```{r}
+## adapted R code 4.65
+d$weight_s <- ( d$weight - mean(d$weight) )/sd(d$weight)
+d$weight_s3 <- d$weight_s^3
+set.seed(2026)
+m4.5 <- quap(
+    alist(
+        height ~ dnorm( mu , sigma ) ,
+        mu <- a + b1*weight_s + b3*weight_s3 ,
+        a ~ dnorm( 178 , 20 ) ,
+        b1 ~ dlnorm( 0 , 1 ) ,
+        b3 ~ dnorm( 0 , 1 ) ,
+        sigma ~ dunif( 0 , 50 )
+    ) , data=d )
+
+precis(m4.5)
+
+weight.seq.m4.5 <- seq( from=1 , to=70 , by=1 )
+
+weight_s.seq.m4.5 <- ( weight.seq.m4.5 - mean(d$weight) )/sd(d$weight)
+weight_s3.seq.m4.5 <- weight_s.seq.m4.5^3
+
+fit_data = data.frame(list(weight_s=weight_s.seq.m4.5,
+                           weight_s3=weight_s3.seq.m4.5))
+
+sim.height.m4.5 <- sim( m4.5 , data=fit_data )
+
+height.PI.m4.5 <- apply( sim.height.m4.5 , 2 , PI , prob=0.89 )
+
+mu.m4.5 <- link( m4.5 , data=fit_data )
+
+mu.mean.m4.5 <- apply( mu.m4.5 , 2 , mean )
+mu.PI.m4.5 <- apply( mu.m4.5 , 2 , PI , prob=0.89 )
+mu.HPDI.m4.5 <- apply(mu.m4.5, 2, HPDI)
+
+plot( height ~ weight , d , col=col.alpha(rangi2,0.5) )
+
+lines( weight.seq.m4.5 , mu.mean.m4.5 )
+
+shade( mu.HPDI.m4.5 , weight.seq.m4.5 )
+
+shade( height.PI.m4.5 , weight.seq.m4.5 )
+```
+
+## Q3A. Using the code above, write out the full regression model (look at the exponents carefully)  
+*Write the equation here:*
+
+height_i ~ Normal(mu_i, sigma)
+mu_i = a + b1 * weight_s_i + b3 * weight_s_i^3
+a ~ Normal(178, 20)
+b1 ~ LogNormal(0, 1)
+b3 ~ Normal(0, 1)
+sigma ~ Uniform(0, 50)
+
+Note: there is NO b2 * weight_s^2 term. The model skips the squared term and goes straight from linear to cubic.
+
+
+## Q3B. What are the units of b1 and b3?  
+*Write your answer in the lines below:*
+
+weight_s is z-scored weight so it is unitless (std devs of weight away from the mean). height is in cm.
+b1 has units of cm per unit of standardized weight (cm per std dev of weight).
+b3 has units of cm per (standardized weight)^3.
+
+
+
+## Q3C. How many parameters are in the posterior distribution?  These parameters compose what kind of function?  
+*Write your answer in the lines below:*
+
+4 parameters: a, b1, b3, sigma.
+a, b1, b3 compose the mean function (the deterministic part of mu), which is a cubic polynomial in weight_s (a cubic with the quadratic coefficient set to 0). sigma is the std of the Gaussian noise around that curve.
+
+
+
+## Q3D. Set your seed to 2026 and fit another model with only a linear component to these data using quadratic approximation. Save this model as “mod3_quap” and output the summary using the precis() function. Plot the model using the code we provided above and compare.  
+
+```{r}
+#mod3_quap
+
+# Set seed
+set.seed(2026)
+
+# Same setup as m4.5 but no cubic term
+mod3_quap <- quap(
+    alist(
+        height ~ dnorm( mu , sigma ) ,
+        mu <- a + b1*weight_s ,
+        a ~ dnorm( 178 , 20 ) ,
+        b1 ~ dlnorm( 0 , 1 ) ,
+        sigma ~ dunif( 0 , 50 )
+    ) , data=d )
+
+# Output summary
+precis(mod3_quap)
+
+# Use the same weight sequence as above
+weight.seq.mod3 <- seq( from=1 , to=70 , by=1 )
+weight_s.seq.mod3 <- ( weight.seq.mod3 - mean(d$weight) )/sd(d$weight)
+
+# Only need weight_s for the linear model (no cubic)
+fit_data_mod3 = data.frame(list(weight_s=weight_s.seq.mod3))
+
+# Simulate heights for PI
+sim.height.mod3 <- sim( mod3_quap , data=fit_data_mod3 )
+height.PI.mod3 <- apply( sim.height.mod3 , 2 , PI , prob=0.89 )
+
+# link for mu
+mu.mod3 <- link( mod3_quap , data=fit_data_mod3 )
+mu.mean.mod3 <- apply( mu.mod3 , 2 , mean )
+mu.HPDI.mod3 <- apply(mu.mod3, 2, HPDI)
+
+# Plot same way as above
+plot( height ~ weight , d , col=col.alpha(rangi2,0.5) )
+
+lines( weight.seq.mod3 , mu.mean.mod3 )
+
+shade( mu.HPDI.mod3 , weight.seq.mod3 )
+
+shade( height.PI.mod3 , weight.seq.mod3 )
+
+```
+
+## Q3E. Does the linear + cubic model fit the data better than a model that only had the linear component? Please show/explain how it is or isn’t a better fit.  
+*Write your answer in the lines below:*
+
+Yes the linear+cubic model fits better. You can see this visually from the plots: the straight line from mod3_quap misses the actual shape of the data because the relationship between weight and height is not linear across the full range (kids with very low weight are much shorter than a straight line would predict, and the curve flattens out for adults). The cubic model bends to follow the data and the HPDI/PI bands hug the real observations much more closely.
+You can also see it in precis: sigma for mod3_quap is larger than for m4.5, meaning there is more leftover variation around the linear line than around the cubic curve, which is consistent with the linear model being a worse fit.
+
+
+
+## Q3F. Solve for a, b1 and b3 using linear algebra (hint: use the linear algebra functions from HW1). Save the calculated parameter values as “params_algebra” and output these values.  
+
+```{r}
+#params_algebra
+
+# Same approach as HW1 with the MASS package for pseudoinverse
+library(MASS)
+
+# Build design matrix: intercept col, weight_s col, weight_s^3 col
+# Note: no squared term since the model skips it
+intercept_column <- rep(1, nrow(d))
+weight_s_col     <- d$weight_s
+weight_s3_col    <- d$weight_s3
+
+# Stack them into X
+X <- cbind(intercept_column, weight_s_col, weight_s3_col)
+
+# y is just height
+y <- d$height
+
+# Moore-Penrose pseudoinverse, same as HW1 10G
+params_algebra <- ginv(t(X) %*% X) %*% t(X) %*% y
+
+# Print
+params_algebra
+
+```
+
+
+## Q3G. Do your calculated parameters from 3f match the parameters from the quap model?  
+*Write your answer in the lines below:*
+
+They are very close but not exactly identical. The quap values for a, b1, b3 are essentially the same as the linear algebra estimates to within a small amount. The tiny differences come from the priors pulling the quap estimates slightly toward the prior means (a ~ Normal(178,20), b1 ~ LogNormal(0,1), b3 ~ Normal(0,1)). With this much data the data dominates and the priors barely move things, so they basically match.
+
+
+## Q3H. Fit the model from 3a using the lm() function. Call this “mod3_lm” and output the summary (2 points). Do your calculated parameters from 3f match the parameters from lm?  
+
+```{r}
+#mod3_lm
+
+# Fit same model with lm (no priors so this should match linear algebra exactly)
+mod3_lm <- lm(height ~ weight_s + weight_s3, data = d)
+
+# Output summary
+summary(mod3_lm)
+```
+*Write your answer in the lines below:*
+
+Yes, these match exactly (up to rounding). lm is doing the same ordinary least squares calculation that the Moore-Penrose pseudoinverse does when X^T X is invertible, so the intercept, b1 (weight_s coef) and b3 (weight_s3 coef) from lm line up with params_algebra.
+
+
+  
+**The code below performs a prior predictive check for a model predicting height using age for children.**  
+```{r}
+d3 = d[d$age<18,]
+N = 20
+a = rnorm(N, 100, 20)
+b = rexp(N, 1)
+
+
+plot(NULL, xlim=range(d3$age), ylim=c(0, 200), xlab="age", ylab="height")
+xbar = mean(d3$age)
+for(i in 1:N) {
+    curve(a[i] + b[i] * (x - xbar), from=min(d3$age), to=max(d3$age),
+          add=TRUE, col=col.alpha("black", 0.2))
+}
+```
+
+## Q3I. What problem with our priors is revealed thanks to this prior predictive check? What could we do to change our priors to address this issue?  
+*Write your answer in the lines below:*
+
+The prior lines have positive slopes (b is Exponential(1) so always positive which is fine, kids do grow taller with age), but the intercept prior Normal(100, 20) is too wide. Some of the sampled intercepts come out pretty low and imply implausibly short children at the average age, and a few of the slopes are shallow enough that the line basically flatlines. You also don't have any mechanism preventing negative heights at young ages in the simulation, even though heights can't be negative.
+Fix: tighten the intercept prior to something centered closer to the actual mean height of kids at the mean age (like Normal(130, 10) or wherever the data suggests) and maybe use a slightly more informative slope prior (like LogNormal so we stay away from both near-zero and crazy steep slopes). Basically pick priors that don't generate impossible kids before seeing any data.
+
+
+
+## Q3J. Now let's perform another prior predictive check for our model above (m4.5), which predicts height from weight (we'll pretend that we haven't fit the data to the model yet). We'll simulate 50 regression lines implied by the priors alone. Some of the code below is taken from the textbook (R code 5.4, page 126)
+
+```{r}
+
+# Sample from your priors using extract.prior() and call it "prior"
+prior <- extract.prior(m4.5)
+
+# Just as above, we'll define sequence of weights to compute predictions for
+# These values will be on the horizontal axis
+weight.seq.m4.5 <- seq( from=1 , to=70 , by=1 )
+weight_s.seq.m4.5 <- ( weight.seq.m4.5 - mean(d$weight) )/sd(d$weight) # Standardized
+weight_s3.seq.m4.5 <- weight_s.seq.m4.5^3 # For cubic term
+
+fit_data = data.frame(list(weight_s=weight_s.seq.m4.5,
+                           weight_s3=weight_s3.seq.m4.5))
+
+
+# Again, just as above, we'll use link() to compute mu for each sample from our *prior*
+# and for each weight in weight.seq
+sample_mu <- link( m4.5 , 
+                   post=prior, 
+                   data=fit_data )
+
+# Plot
+plot( NULL , xlim=c(1, 70) , ylim=c(-100, 300) , xlab="weight", ylab="height")
+
+for ( i in 1:50 ) {
+  lines( weight.seq.m4.5 , sample_mu[i,] , col=col.alpha("black",0.4) )
+} 
+
+```
+
+Do the priors allow for implausible heights? If so, suggest a modification to make the priors more reasonable.  
+*Write your answer in the lines below:*
+
+Yes, plenty of implausible heights. Many of the prior-sampled lines go into negative height territory at low weights and some shoot way above any physically possible human height at high weights. Heights below 0 are literally impossible and heights above ~250 cm are also unrealistic.
+The b3 ~ Normal(0, 1) prior is probably the main offender because it is centered at 0 and allows large positive OR negative cubic coefficients, and cubics go crazy fast at the ends of the range. Tightening b3 (like Normal(0, 0.3)) would keep the cubic from whipping around. The intercept prior is fine in magnitude but combined with a loose b3 lets things get silly. Could also switch to a log-normal height distribution to guarantee positive heights, but the simpler fix is just tighter priors on b3.
+
+
+
+# Question 4: Splines vs. Polynomial Regression  
+  
+**What is the main advantage of using splines over polynomial regression?  What is a disadvantage of using a spline?**
+*Write your answer in the lines below:*
+
+Main advantage: splines are local. A spline is made of basis functions that only influence a narrow range of x, so a weird chunk of data in one region doesn't mess up the fit in another region. Polynomials are global: every data point affects the whole curve everywhere, and high degree polynomials go absolutely bananas at the ends (Runge's phenomenon). Splines give you flexibility without that global instability.
+Disadvantage: you have to choose knots (where they go, how many) and the basis degree, and those choices are kind of arbitrary/fussy. Too many knots and you overfit, too few and you underfit. Also splines are less interpretable as an equation: "b1 times weight plus b3 times weight cubed" is a sentence you can reason about, a set of basis weights with knots is less so.
+
+
+
+# Question 5: Adding Predictors to a Model  
+
+**Is it always a good idea to add all potential predictor variables that you can think of into a multiple regression?  When will adding predictors help?  When will it hurt inference?**
+*Write your answer in the lines below:*
+
+No, it is not always a good idea. Adding predictors will help when they are actual causal influences on the outcome that you are NOT already capturing (so they explain additional variance and de-confound your estimates of the coefficients you care about), or when they block a backdoor path that would otherwise produce spurious associations.
+It will hurt inference in several cases. First, if you include a post-treatment variable (something downstream of your treatment) you end up controlling away the effect you were trying to measure (mediators eat your effect). Second, if you include a collider (a variable that is downstream of both your predictor and outcome) you actually open up a spurious path and introduce confounding that wasn't there before. Third, just adding lots of noisy predictors eats degrees of freedom and can overfit. So the right set of predictors is guided by causal structure (what the DAG says), not by dumping everything into the regression.
+
+
+
+# Question 6: Spurious Correlations, Masked Relations  
+
+The code below will create data for a spurious correlation, where the variable x_spur is spuriously correlated with y.
+```{r}
+set.seed(2026)
+N <- 100   #number of cases
+x_real <- rnorm(N) #x_real as Gaussian with mean = 0 and std = 1
+x_spur <- rnorm(N, x_real) #x_spur as Gaussian with mean = x_real
+y <- rnorm(N, x_real) #y as Gaussian with mean = x_real
+d <- data.frame(y, x_real, x_spur) #bind them all together
+#make a scatterplot
+pairs(d)
+```
+
+
+## Q6A. Please draw a DAG for this spurious relationship using the daggity package. Call this DAG “dag_6A”.  
+
+```{r}
+#dag_6A <- dagitty( "dag{  }" )   # setting up the DAG using dagitty()
+#coordinates(dag_6A) <- list( )   # specify the coordinates in your DAG
+#drawdag( dag_6A )    # draw the DAG
+
+# x_real drives both x_spur and y, so x_spur looks correlated with y but only through x_real
+dag_6A <- dagitty( "dag{ x_real -> x_spur ; x_real -> y }" )
+coordinates(dag_6A) <- list( x=c(x_real=1, x_spur=0, y=2) , y=c(x_real=0, x_spur=1, y=1) )
+drawdag( dag_6A )
+
+```
+
+
+The code below will create data of a masked relationship between x and y.
+```{r}
+set.seed(2026)
+N <- 100     #number of cases
+rho <- 0.7   #correlation between predictors x_pos and x_neg
+x_pos <- rnorm(N) #x_pos as Gaussian
+x_neg <- rnorm(N, rho*x_pos, sqrt(1-rho^2)) #x_neg correlated with x_pos
+y <- rnorm(N, x_pos - x_neg) #
+
+d <- data.frame(y, x_pos, x_neg) #bind it all together
+pairs(d)
+```
+
+## Q6B. Now draw a DAG for this masked relationship using the daggity package. Call this DAG “dag_6B”.  
+
+```{r}
+#dag_6B 
+
+# x_pos and x_neg are correlated, and both cause y (with opposite signs)
+# In the sim code x_neg is literally generated from x_pos so I'll draw x_pos -> x_neg
+# plus both -> y
+dag_6B <- dagitty( "dag{ x_pos -> x_neg ; x_pos -> y ; x_neg -> y }" )
+coordinates(dag_6B) <- list( x=c(x_pos=0, x_neg=2, y=1) , y=c(x_pos=0, x_neg=0, y=1) )
+drawdag( dag_6B )
+
+```
+
+
+## Q6C. What is the difference in the correlation structure, i.e., the correlation matrix between a spurious correlation and a masked correlation?  
+*Write your answer in the lines below:*
+
+In the spurious case, the bivariate correlation matrix shows BOTH predictors correlated with y (even though only x_real actually drives y, x_spur looks correlated with y because of their shared cause).
+In the masked case, the bivariate correlation matrix shows each predictor has weak or near-zero correlation with y on its own, even though both of them actually drive y. The two opposing effects cancel out at the bivariate level, so the pairwise correlations hide the real relationships. You only see the true effects when you include both predictors together in the regression.
+
+
+
+## Q6D. How does changing rho, the correlation between the predictors x_neg and x_pos, change the amount of masking?  To answer this question, you will need to fit a  model (use lm for ease). Try values of rho = 0.7 and = 0.999. Set your seed to 2026 before *each* simulation.  
+
+```{r}
+#Test your values of rho here
+
+# --- rho = 0.7 ---
+set.seed(2026)
+N <- 100
+rho <- 0.7
+x_pos <- rnorm(N)
+x_neg <- rnorm(N, rho*x_pos, sqrt(1-rho^2))
+y <- rnorm(N, x_pos - x_neg)
+d_rho7 <- data.frame(y, x_pos, x_neg)
+
+# Bivariate correlations
+cor(d_rho7)
+
+# Multiple regression with both predictors
+mod_rho7 <- lm(y ~ x_pos + x_neg, data = d_rho7)
+summary(mod_rho7)
+
+
+# --- rho = 0.999 ---
+set.seed(2026)
+N <- 100
+rho <- 0.999
+x_pos <- rnorm(N)
+x_neg <- rnorm(N, rho*x_pos, sqrt(1-rho^2))
+y <- rnorm(N, x_pos - x_neg)
+d_rho999 <- data.frame(y, x_pos, x_neg)
+
+# Bivariate correlations
+cor(d_rho999)
+
+# Multiple regression with both predictors
+mod_rho999 <- lm(y ~ x_pos + x_neg, data = d_rho999)
+summary(mod_rho999)
+
+```
+  
+*Write your answer in the lines below:*  
+
+At rho = 0.7 the multiple regression recovers coefficients close to the true values (+1 for x_pos, -1 for x_neg) and the standard errors are reasonable. The bivariate correlations between each predictor and y are small individually, which is the masking showing up.
+At rho = 0.999 the two predictors are nearly identical so the model can barely separate them. The coefficients still average toward the right thing (positive for x_pos, negative for x_neg) but the standard errors blow up hugely, meaning huge uncertainty in each individual coefficient. This is basically multicollinearity. As rho gets closer to 1 the masking at the bivariate level gets stronger (each predictor alone looks even less correlated with y) but the multiple regression also loses power to tell the predictors apart.
+
+
+## Q6E. What are the dangers of interpreting a bivariate correlation matrix?  What do you really want to know about the relationship between variables?  
+*Write your answer in the lines below:*
+
+The danger is that a bivariate correlation matrix tells you nothing about causal structure. You can see a strong correlation that is actually spurious (driven by a common cause, like Q6A) and you can miss real effects that are masked by opposing correlated predictors (like Q6B). So correlations overstate relationships in some cases and understate them in others, and you can't tell which from the matrix alone.
+What I actually want to know is the causal structure: which variables cause which, what the DAG looks like, and then conditional on that structure what the direct and indirect effects of each variable are. Once I have a DAG I can choose what to condition on (close backdoors, don't open colliders) and get something I can actually interpret causally.
+
+
+
+# Question 7: Randomized Controlled Experiments & Causal Inference for Non-Experiments  
+
+## Q7A. How do randomized controlled experiments allow for causal inference?  What do they do to DAG models?  
+*Write your answer in the lines below:*
+
+RCTs work because when you randomly assign the treatment you physically break any arrows from other variables into the treatment variable. In DAG terms, randomization deletes all incoming edges to the treatment node, so the treatment is independent of any potential confounders by construction. There cannot be a backdoor path from treatment to outcome through some lurking variable because nothing can influence the treatment assignment (it was a coin flip).
+That means any association you observe between treatment and outcome has to come through the direct causal path, which is what makes the inference causal rather than just correlational.
+
+
+
+## Q7B. What needs to be done and what criteria need to be met to draw causal inferences from observational/non-experimental studies?  
+*Write your answer in the lines below:*
+
+You have to explicitly write out a causal DAG that you think describes the variables and their relationships. Then you need to find a set of variables to condition on that closes all backdoor paths from your predictor of interest to your outcome, without conditioning on colliders (which would open new spurious paths) and without conditioning on post-treatment/mediator variables (which would block the very effect you are trying to measure).
+The main criterion is the backdoor criterion: the set of conditioning variables should block every path from X to Y that starts with an arrow into X, while leaving open the directed causal paths from X to Y. You also have to assume the DAG you wrote down is actually correct (no important unobserved confounders you missed), which is a strong assumption. If the DAG is wrong the causal estimate is wrong.
+
+
+
+# Question 8: Interpreting DAGs  
+
+**The code below will draw a DAG to be used for part A.**  
+
+```{r}
+dag_6M1 <- dagitty("dag{
+U [unobserved]
+V [unobserved]
+Y -> X
+X <- U -> B <- C -> Y
+U <- A -> C
+C <- V -> Y }")
+coordinates(dag_6M1) <- list(x=c(X=0,Y=2,U=0,A=1,B=1,C=2,V=2.5),
+y=c(X=2,Y=2,U=1,A=0.5,B=1.5,C=1,V=1.5) )
+drawdag(dag_6M1)
+```
+
+## Q8A. What paths, if any, need to be closed to draw causal inferences between the effect of Y -> X?  If there are problematic paths how do you close them?  What variables would you not want to condition on, if any? In this DAG can we draw a causal inference from Y -> X?  
+*Write your answer in the lines below:*
+
+The direct causal path is Y -> X. For causal inference of Y on X we need to block backdoor paths from Y into X (paths ending with an arrow into X).
+Arrows into X come from Y (the direct path we want) and from U. So backdoor paths from Y to X all need to end in U -> X. Relevant ones:
+ - Y <- C <- A -> U -> X  (through A)
+ - Y <- V -> C <- A -> U -> X  (V is unobserved, also has a collider at C)
+ - Through B: Y ... B ... X. B is a collider between U and C (U -> B <- C) so it's already closed unless we condition on it.
+To close the backdoor through A we can condition on A (or equivalently on C, but conditioning on C is trickier because C is on a path with a collider at B). U and V are unobserved so we can't condition on those directly.
+Variables NOT to condition on: B. B is a collider (U -> B <- C), and conditioning on it opens a spurious path between U and C, which would reconnect X and Y through that newly opened route.
+Can we make the inference? Yes, probably — if we condition on A (and possibly C as well) we can block the backdoor paths without opening the B collider. adjustmentSets() on this DAG with exposure=Y and outcome=X would give us the exact sets. So causal inference is possible as long as we do NOT condition on B.
+
+
+
+**The code below will draw a DAG to be used for part B.**  
+
+```{r}
+dag_6H1 <- dagitty("dag{A -> D; A -> M -> D; A <- S -> D; S -> W -> D}")
+coordinates(dag_6H1) <- list(
+x=c(A=0,M=1,D=2,S=1,W=2),
+y=c(A=0.75,M=0.5,D=1,S=0,W=0) )
+drawdag(dag_6H1)
+```
+
+## Q8B. What paths, if any, need to be closed to draw causal inferences between the effect of M -> D?  If there are problematic paths, how do you close them?  What variables do you not want to condition on, if any? In this DAG can we draw a causal inference from M -> D?  
+*Write your answer in the lines below:*
+
+The direct causal path is M -> D. I need to find backdoor paths from M to D (paths starting with an arrow INTO M).
+Arrows into M: only A -> M.
+So the backdoor paths all start with M <- A:
+ - M <- A -> D
+ - M <- A <- S -> D
+ - M <- A <- S -> W -> D
+
+Conditioning on A blocks all three because A is the first node on every backdoor path (either as the source of an outgoing edge to D, or as the node that chains through S). So conditioning on just A is enough.
+
+Variables NOT to condition on: don't condition on W, it is a mediator on the S -> W -> D path but it is not on any backdoor path between M and D, so conditioning on it just adds noise. Don't condition on D or anything downstream of D. There are no colliders on the backdoor paths between M and D here, so no risk of opening new paths by conditioning.
+
+Yes, we CAN draw a causal inference from M -> D by conditioning on A.
+
+
+  
+# Question 9: Simpson’s Paradox  
+
+**For this question, run the code below to load in the dataframe ‘exercise_data’, which contains three variables: Cholesterol amount, Exercise amount, and Age of subjects.**  
+
+```{r}
+exercise_data <- read.csv('Age_Exercise_Cholesterol_for_HW2.csv')
+
+exercise_data_slim <- list(
+  Cholesterol = scale(exercise_data$Cholesterol),  
+  Exercise = scale(exercise_data$Exercise),
+  Age = scale(exercise_data$Age)  # for 9E
+)
+```
+
+## Q9A. Set your seed to 2026 and fit a Bayesian linear model that predicts Cholesterol (d.v.) with Exercise as the predictor (i.v.). Call this model “model_9A”, and output the coefficients using precis.  
+
+```{r}
+#model_9A
+
+# Set seed
+set.seed(2026)
+
+# Bayesian regression of Cholesterol on Exercise (both z-scored already)
+# Priors are weak-ish since everything is standardized
+model_9A <- quap(
+    alist(
+        Cholesterol ~ dnorm( mu , sigma ) ,
+        mu <- a + bE*Exercise ,
+        a ~ dnorm( 0 , 0.2 ) ,
+        bE ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = exercise_data_slim )
+
+# Output coefficients
+precis(model_9A)
+
+```
+
+
+## Q9B. Do these results match what you might hypothesize about the relationship between cholesterol and exercise?  Do they make sense?  
+*Write your answer in the lines below:*
+
+Not really. If you asked me ahead of time I would have guessed that more exercise means LOWER cholesterol (negative slope). The model gives a positive bE which says more exercise is associated with higher cholesterol, which is backwards from common sense. So these results don't match my hypothesis and they seem suspicious — suggests something else is going on in the data (probably confounding with age).
+
+
+
+## Q9C. Let’s explore our data further by including the other variable in our dataset, Age.  Create a scatterplot of Cholesterol (y-axis) vs. Exercise (x-axis) that colors individual points based on Age.  Keep this new scatterplot in mind and explain the Simpson’s paradox you observe.  
+
+```{r}
+#plot your data here
+
+# Scatter of Cholesterol vs Exercise colored by Age
+ggplot(exercise_data, aes(x = Exercise, y = Cholesterol, color = Age)) +
+  geom_point() +
+  scale_color_gradient(low = "blue", high = "red") +
+  xlab("Exercise") +
+  ylab("Cholesterol")
+
+```
+
+Simpson's paradox: within any given age (same color/band of points), more exercise is associated with LOWER cholesterol, which is what you'd expect. BUT across age groups, older people (red) both exercise more AND have higher cholesterol than younger people (blue). So when you ignore age and look at the whole cloud of points, the overall slope comes out positive because age is dragging the relationship the wrong way. The within-group effect is negative, the across-group effect (driven by age) is positive, and the across-group effect dominates the naive bivariate regression. Classic Simpson's.
+
+
+## Q9D. Draw a DAG using the daggity package to display how the variables of Cholesterol, Exercise, and Age are related. Call this dag “dag_9D”.  
+
+```{r}
+#dag_9D
+
+# Age drives both Exercise amount AND Cholesterol, and Exercise also drives Cholesterol
+# So Age is a confounder on the Exercise -> Cholesterol relationship
+dag_9D <- dagitty( "dag{ Age -> Exercise ; Age -> Cholesterol ; Exercise -> Cholesterol }" )
+coordinates(dag_9D) <- list( x=c(Age=1, Exercise=0, Cholesterol=2) , y=c(Age=0, Exercise=1, Cholesterol=1) )
+drawdag(dag_9D)
+
+```
+
+## Q9E. Finally, reset your seed to 2026 and fit another Bayesian linear model that predicts Cholesterol (using Exercise and Age).  Call this model “model_9E” and output the coefficients using precis. Do the results of this model make more sense than the model with only Exercise as a predictor?  
+
+```{r}
+#model 9E
+
+# Reset seed
+set.seed(2026)
+
+# Now include Age as a predictor to close the backdoor through Age
+model_9E <- quap(
+    alist(
+        Cholesterol ~ dnorm( mu , sigma ) ,
+        mu <- a + bE*Exercise + bA*Age ,
+        a ~ dnorm( 0 , 0.2 ) ,
+        bE ~ dnorm( 0 , 0.5 ) ,
+        bA ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = exercise_data_slim )
+
+# Output coefficients
+precis(model_9E)
+
+```
+
+*Write your answer in the lines below:*
+
+Yes these make way more sense. Once Age is included, bE flips to negative: holding age constant, more exercise is associated with lower cholesterol, which matches what I expected. bA comes out positive, meaning older age is associated with higher cholesterol which also matches real-world patterns. So conditioning on the confounder (Age) reveals the true within-person relationship between exercise and cholesterol, and the paradox is resolved.
+
+
+
+# Question 10: Stroop Data  
+
+We are going to reexamine the Stroop data with an eye towards what we can learn about the causal structure, based on regressions. To start, we will focus on the following variables: “RT”, “Condition”, and “young_or_old”.
+
+## Q10A. First, draw a possible DAG that you think may describe the relationship between the 3 variables. Call this dag “dag_10A”. Are there any independencies between the variables, conditional or otherwise?  
+
+```{r}
+#dag_10A
+
+# Condition (congruent/incongruent) and young_or_old both affect RT directly
+# young_or_old shouldn't affect Condition (trial condition is randomized within subjects),
+# and Condition doesn't affect age obviously
+dag_10A <- dagitty( "dag{ Condition -> RT ; young_or_old -> RT }" )
+coordinates(dag_10A) <- list( x=c(Condition=0, young_or_old=2, RT=1) , y=c(Condition=0, young_or_old=0, RT=1) )
+drawdag(dag_10A)
+
+# Check implied conditional independencies
+impliedConditionalIndependencies(dag_10A)
+
+```
+
+*Write your answer in the lines below:*
+
+In this DAG, Condition and young_or_old are independent of each other marginally (no arrow between them and no shared cause). RT depends on both. impliedConditionalIndependencies says Condition _||_ young_or_old (i.e. they're independent). They are NOT conditionally independent given RT because RT is a collider — conditioning on it would open a path between Condition and young_or_old.
+
+
+## Q10B. Set your seed to 2026 and run a Bayesian regression using quap to predict RT from Condition and young_or_old. Make sure to standardize (z-score) RT! Call this model “model_10B” and output a summary of the posterior using precis. Do the results align with your DAG? Are they consistent with any alternative causal structures, for example, those with hidden variables?  
+
+```{r}
+Stroop_Data <- read.csv('stroop_dataset_HW2.csv')
+
+#model_10B 
+
+# Standardize RT (z-score)
+Stroop_Data$RT_z <- scale(Stroop_Data$RT)
+
+# Set seed
+set.seed(2026)
+
+# Data list for quap
+stroop_slim <- list(
+  RT_z         = as.numeric(Stroop_Data$RT_z),
+  Condition    = Stroop_Data$Condition,
+  young_or_old = Stroop_Data$young_or_old
+)
+
+# Fit model: RT_z ~ a + bC*Condition + bY*young_or_old
+model_10B <- quap(
+    alist(
+        RT_z ~ dnorm( mu , sigma ) ,
+        mu <- a + bC*Condition + bY*young_or_old ,
+        a ~ dnorm( 0 , 0.5 ) ,
+        bC ~ dnorm( 0 , 0.5 ) ,
+        bY ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = stroop_slim )
+
+# Summary
+precis(model_10B)
+```
+
+*Write your answer in the lines below:*
+
+Both bC and bY come out positive and credible — incongruent trials have longer RT, and older people have longer RT. This is consistent with my DAG (both Condition and young_or_old directly cause RT).
+These results are ALSO consistent with alternative DAGs that have hidden variables. For example, there could be a latent variable like "neural processing speed" that is influenced by age and influences RT, so young_or_old -> hidden -> RT would produce the same regression results. I can't tell from this regression alone whether the effect of age on RT is direct or mediated by something else I haven't measured.
+
+
+
+Please see the Homework instructions document for more information about the new variable we will add to our model, "neural_accum".
+
+## Q10C. Reset your seed to 2026 and rerun the Bayesian model above, including “neural_accum” as an additional regressor. (The units of neural_accum are arbitrary, so make sure to standardize it as well)). Call this model “model_10C”, and output a summary of the posterior using precis.  
+
+```{r}
+#model_10C
+
+# Standardize neural_accum
+Stroop_Data$neural_accum_z <- scale(Stroop_Data$neural_accum)
+
+# Reset seed
+set.seed(2026)
+
+# Data list now including neural_accum_z
+stroop_slim2 <- list(
+  RT_z            = as.numeric(Stroop_Data$RT_z),
+  Condition       = Stroop_Data$Condition,
+  young_or_old    = Stroop_Data$young_or_old,
+  neural_accum_z  = as.numeric(Stroop_Data$neural_accum_z)
+)
+
+# Same setup as 10B but with neural_accum_z added
+model_10C <- quap(
+    alist(
+        RT_z ~ dnorm( mu , sigma ) ,
+        mu <- a + bC*Condition + bY*young_or_old + bN*neural_accum_z ,
+        a ~ dnorm( 0 , 0.5 ) ,
+        bC ~ dnorm( 0 , 0.5 ) ,
+        bY ~ dnorm( 0 , 0.5 ) ,
+        bN ~ dnorm( 0 , 0.5 ) ,
+        sigma ~ dexp( 1 )
+    ) , data = stroop_slim2 )
+
+# Summary
+precis(model_10C)
+
+```
+
+
+
+## Q10D. What happened to the betas for Condition and young_or_old? What does this imply about the causal structure of these 4 variables?  
+*Write your answer in the lines below:*
+
+Both bC and bY shrink a lot (toward zero) once neural_accum is added, while bN is strongly negative (faster accumulation = lower RT). This implies that most of the effect of Condition and young_or_old on RT is actually mediated by neural_accum. In other words, being in the incongruent condition slows down how fast evidence accumulates, being older also slows down accumulation, and accumulation rate is what directly drives RT. Once you control for accumulation rate, the direct effects of Condition and age on RT mostly disappear — the signature of a mediator.
+
+
+
+## Q10E. Draw a DAG that is consistent with this causal structure. Call this DAG “dag_10E”.  
+
+```{r}
+#dag_10E 
+
+# Condition and young_or_old both affect neural_accum, and neural_accum drives RT
+# neural_accum is the mediator between Condition/young_or_old and RT
+dag_10E <- dagitty( "dag{ Condition -> neural_accum ; young_or_old -> neural_accum ; neural_accum -> RT }" )
+coordinates(dag_10E) <- list(
+  x=c(Condition=0, young_or_old=2, neural_accum=1, RT=1) ,
+  y=c(Condition=0, young_or_old=0, neural_accum=1, RT=2) )
+drawdag(dag_10E)
+
+```
+
+
+## Question 11: Your Research  
+
+## Q11A. Using your model and priors from Homework 1 question 11 where you wrote out a model for your research question, perform a prior predictive simulation of your model.  
+```{r}
+#your prior predictive simulation here
+
+# My modified Gosselin & Schyns style auditory task
+# Per-subject alignment: theta_s ~ Normal(mu_theta, sigma_theta)
+# Group level: mu_theta ~ Normal(0, 1), sigma_theta ~ HalfCauchy(0, 0.5)
+# Per-trial response: y_si ~ Bernoulli(inverse_logit(w_s . x_i + b_s))
+# I'll simulate what the priors imply for (a) subject alignments and (b) trial response probabilities
+
+set.seed(2026)
+
+# Number of simulated subjects
+n_subjects <- 30
+n_trials <- 100
+
+# Sample group level priors 
+mu_theta_samples    <- rnorm(n_subjects, 0, 1)      # group mean alignment prior
+# HalfCauchy isn't in base R, approximate via abs of cauchy
+sigma_theta_samples <- abs(rcauchy(n_subjects, 0, 0.5))
+
+# Sample subject level alignment theta_s
+theta_s <- rnorm(n_subjects, mu_theta_samples, sigma_theta_samples)
+
+# Look at the distribution of implied alignments
+hist(theta_s, breaks=20,
+     main="Prior predictive: subject alignments theta_s",
+     xlab="theta_s")
+
+# Now also simulate the trial level logit to see what P(yes) the prior implies
+# w_s . x_i is a dot product of K weights and K features
+# Assume weights are Normal(0, sd_w) and features are Normal(0, 1)
+# Then dot product has std sqrt(K) * sd_w
+K <- 20
+sd_w <- 1
+logit_vals <- rnorm(n_trials * n_subjects, 0, sqrt(K) * sd_w)
+probs <- 1 / (1 + exp(-logit_vals))
+
+hist(probs, breaks=30,
+     main="Prior predictive: implied P(yes) per trial",
+     xlab="P(yes)")
+
+```
+
+
+
+## Q11B. Do you like your choice of priors?  If not, what would you change?  
+*Write your answer in the lines below:*
+
+Kind of but not fully. The theta_s (alignment) prior Normal(0,1) seems reasonable — the histogram of alignments sits around zero with spread that allows both positive and negative alignment, which is what I want since I don't want to assume subjects align with the optimal observer.
+The problem is the trial level: with K=20 frequency bins and each weight ~ Normal(0,1), the implied dot product has std around sqrt(20) ~ 4.5. That pushes the implied P(yes) distribution toward being bimodal (tons of near-0 and near-1 probabilities), which is unrealistic — it says subjects should be almost always extremely confident before they've even seen any data, which is the opposite of "I have no idea what subjects will do".
+I would tighten the per-weight prior to something like Normal(0, 1/sqrt(K)) so that the total dot product has roughly unit variance, which would concentrate the prior P(yes) around 0.5 with reasonable spread. That would encode "I don't know yet" much better.
+
+
+
+## Q11C. Write a causal model for your research question.  Think of and discuss what variables you might include in your causal model that would ruin your experiment.  This is true of both observational and experimental studies.  
+*Write your answer in the lines below:*
+
+Causal DAG for the experiment:
+ stimulus_spectrum (x_i) -> subject_response (y_si)
+ subject_weights (w_s) -> subject_response (y_si)
+ alignment theta_s is a derived quantity from w_s vs w_true (not a node per se, but computed)
+
+Variables that could ruin the experiment if they act as confounders:
+ - Hearing ability / audiogram. If subjects have different sensitivity across frequencies, what looks like a "weight" on a frequency bin could really be "they can't hear that frequency well". Measured audiograms would let me condition on or exclude this.
+ - Attention / fatigue / time on task. If subjects zone out later in the session their responses become more random, which looks like low theta_s when its really just noise. Randomize trial order and maybe include trial_num as a covariate.
+ - Response bias (pure yes/no tendency unrelated to stimulus). Inflates the bias term b_s and could leak into weight estimates. Balance target/distractor trials and monitor overall hit rates.
+ - Prior experience with auditory tasks / musical training. Musicians may have different spectral weighting than naive listeners. If I'm trying to say something about the general population, this is a confound — I'd want to record musical training and stratify or condition.
+ - Equipment / volume differences. If subjects run at different listening levels the effective SNR differs, which changes what weights are optimal. Standardize equipment and calibration.
+ - Adaptation / learning across the session. If subjects change strategy mid-experiment, early-session and late-session responses reflect different w_s. Could split halves and check.
+
+If I don't handle these I can't cleanly attribute variation in theta_s to genuine individual differences in decision strategy vs. sensory, task, or motivational confounds.
+
+
+
+
+## Q11D: Please respond to the set of questions that are applicable to your study below, based on whether your study is observational or experimental:  
+
+**If your study is an observational study**, what variables would you want to manipulate to de-confound your iv.'s of interest?  What are some variables you would not want to include in your multiple regression?  
+  
+*Write your answer in the lines below:*  
+
+  
+**If your study is an experimental study**, and you found related data in an observational study from a larger dataset, how might your i.v.'s now be confounded with other variables?  Would it be possible for you to condition on certain variables to de-confound them, or is causal inference not possible for your research question in an observational context (i.e., you would have to run an experiment)?  
+  
+*Write your answer in the lines below:*  
+
+My study is experimental (I present white noise stimuli with controlled spectra, random trial order, and random assignment of stimulus type per trial).
+
+If I found related data in an observational dataset — say, recordings of people categorizing naturally occurring sounds — my i.v.'s would be confounded in a bunch of ways. In the observational setting, the spectrum of sounds a person hears is NOT randomly assigned, it correlates with environment (urban vs rural, occupation, indoor vs outdoor), hearing ability (people with hearing loss avoid certain environments), and prior experience (musicians pay attention to certain frequencies). So what looks like a "weight" they put on some frequency is tangled up with what environments they've been in and what they already know.
+
+Could I condition my way to causal inference? Partially. If I had enough covariates (audiogram, environment/occupation, musical training, age, hours of task-relevant experience) and the DAG was correct, I could close backdoor paths with multiple regression and at least reduce confounding. But I would always worry about unobserved variables — there's basically always an attention/motivation/engagement variable I can't measure observationally, and that would still bias things.
+
+For the specific question of "what spectral weighting does a subject use when classifying a target/distractor pair that I defined", causal inference in a purely observational context is not really possible, because the whole concept depends on me as the experimenter defining what the "correct" classification is. Without controlled stimuli and a controlled ground-truth rule there is no w_true to compute alignment against. So I would have to run an experiment at least to establish the reference, even if I then supplement with observational data later.
+
+
+
+

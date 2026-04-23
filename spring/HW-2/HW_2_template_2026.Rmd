@@ -1,0 +1,557 @@
+---
+title: "HW_2 SP2026 ExpDes_StatMod_2"
+author:
+output: html_document
+---
+Due: Friday, April 24 at 11:59pm
+
+Points: 244
+
+Topics: Linear and Polynomial Regression, Multiple Regression, Causal Modeling
+
+Please turn in this assignment on Canvas.  You should turn in your .Rmd file, i.e., your R markdown file, as well as the corresponding .html or .pdf file (i.e., the knitted Rmarkdown file). 
+
+**If you worked with someone on these homework please list them here:**
+
+Worked with:
+
+
+AI disclosure. In 150 words or less, please describe how you used AI on this assignment. You can have the AI that you used generate how it was used for this assignment:   
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_knit$set(root.dir = "/home/expdes/outputs/")
+
+library(tidyverse)
+library(tidyr)
+library(brms)
+library(sjPlot)
+library(ggpubr)
+library(RColorBrewer)
+library(cowplot)
+library(modelr)
+library(gridExtra)
+library(tidybayes)
+library(rethinking)
+library(gtools)
+library(cmdstanr)
+library(ggplot2)
+library(dplyr)
+library(reshape)
+library(lme4)
+library(rstatix)
+library(dagitty)
+
+set.seed(1)  # Ensures reproducible results
+
+theme_set(theme_minimal())  # My personal preference for less ugly default plots
+```
+
+# Question 1: Inferential uncertainty
+
+## Q1A. People often confuse confidence intervals around the mean (inferential stats) vs. confidence intervals around individual observations and think the intervals around the mean applies to individual observations.  According to Zhang et al. (2023), does this cause people to over- or under-estimate their effect sizes?  (2 points)  
+*Write your answer in the lines below:*
+
+
+## Q1B. Related to this, does this confusion lead people to over- or under-estimate how predictive their models are at predicting individual observations? (2 points)  
+*Write your answer in the lines below:*
+
+
+
+# Question 2: Interpreting Posteriors
+
+The following code produces the figure 4.10 from McElreath.
+
+```{r}
+data(Howell1)
+d <- Howell1 
+d2 <- d[ d$age >= 18 , ]
+# define the average weight, x-bar
+xbar <- mean(d2$weight)
+d2$centered_weights<-d2$weight-xbar
+
+
+# fit model
+set.seed(2026)
+m4.3 <- quap(
+    alist(
+        height ~ dnorm( mu , sigma ) ,
+        mu <- a + b*( centered_weights ) ,
+        a ~ dnorm( 178 , 20 ) ,
+        b ~ dlnorm( 0 , 1 ) ,
+        sigma ~ dunif( 0 , 50 )
+    ) , data=d2 )
+
+# define sequence of weights to compute predictions for
+# these values will be on the horizontal axis
+weight.seq <- seq( from=-20 , to=20 , by=1 )
+
+sim.height <- sim( m4.3 , data=list(centered_weights=weight.seq) )
+
+height.PI <- apply( sim.height , 2 , PI , prob=0.89 )
+
+
+# use link to compute mu
+# for each sample from posterior
+# and for each weight in weight.seq
+mu <- link( m4.3 , data=data.frame(centered_weights=weight.seq) )
+
+# summarize the distribution of mu
+mu.mean <- apply( mu , 2 , mean )
+mu.PI <- apply( mu , 2 , PI , prob=0.89 )
+mu.HPDI <- apply(mu, 2, HPDI)
+
+# plot heighs vs. centered weights
+plot( height ~ centered_weights, d2 , col=col.alpha(rangi2,0.5))
+
+# draw MAP line
+lines( weight.seq , mu.mean )
+
+# draw HPDI region for line
+shade( mu.HPDI , weight.seq )
+
+# draw PI region for simulated heights
+shade( height.PI , weight.seq )
+```
+
+## Q2A. What does the narrower shaded interval represent?  
+*Write your answer in the lines below:*
+
+
+
+## Q2B. What does the wider shaded interval represent?  
+*Write your answer in the lines below:*
+
+
+
+## Q2C. What makes the narrower interval narrower, and the wider interval wider?  
+*Write your answer in the lines below:*
+
+
+
+## Q2D. The posterior distribution has how many parameters in it?  What do those parameters describe?  
+*Write your answer in the lines below:*
+
+
+
+# Question 3: Predicting Height from Weight  
+
+The following code (modified from 4.65 in McElreath) creates a model that predicts height from weight.
+
+```{r}
+## adapted R code 4.65
+d$weight_s <- ( d$weight - mean(d$weight) )/sd(d$weight)
+d$weight_s3 <- d$weight_s^3
+set.seed(2026)
+m4.5 <- quap(
+    alist(
+        height ~ dnorm( mu , sigma ) ,
+        mu <- a + b1*weight_s + b3*weight_s3 ,
+        a ~ dnorm( 178 , 20 ) ,
+        b1 ~ dlnorm( 0 , 1 ) ,
+        b3 ~ dnorm( 0 , 1 ) ,
+        sigma ~ dunif( 0 , 50 )
+    ) , data=d )
+
+precis(m4.5)
+
+weight.seq.m4.5 <- seq( from=1 , to=70 , by=1 )
+
+weight_s.seq.m4.5 <- ( weight.seq.m4.5 - mean(d$weight) )/sd(d$weight)
+weight_s3.seq.m4.5 <- weight_s.seq.m4.5^3
+
+fit_data = data.frame(list(weight_s=weight_s.seq.m4.5,
+                           weight_s3=weight_s3.seq.m4.5))
+
+sim.height.m4.5 <- sim( m4.5 , data=fit_data )
+
+height.PI.m4.5 <- apply( sim.height.m4.5 , 2 , PI , prob=0.89 )
+
+mu.m4.5 <- link( m4.5 , data=fit_data )
+
+mu.mean.m4.5 <- apply( mu.m4.5 , 2 , mean )
+mu.PI.m4.5 <- apply( mu.m4.5 , 2 , PI , prob=0.89 )
+mu.HPDI.m4.5 <- apply(mu.m4.5, 2, HPDI)
+
+plot( height ~ weight , d , col=col.alpha(rangi2,0.5) )
+
+lines( weight.seq.m4.5 , mu.mean.m4.5 )
+
+shade( mu.HPDI.m4.5 , weight.seq.m4.5 )
+
+shade( height.PI.m4.5 , weight.seq.m4.5 )
+```
+
+## Q3A. Using the code above, write out the full regression model (look at the exponents carefully)  
+*Write the equation here:*
+
+
+## Q3B. What are the units of b1 and b3?  
+*Write your answer in the lines below:*
+
+
+
+## Q3C. How many parameters are in the posterior distribution?  These parameters compose what kind of function?  
+*Write your answer in the lines below:*
+
+
+
+## Q3D. Set your seed to 2026 and fit another model with only a linear component to these data using quadratic approximation. Save this model as “mod3_quap” and output the summary using the precis() function. Plot the model using the code we provided above and compare.  
+
+```{r}
+#mod3_quap
+
+```
+
+## Q3E. Does the linear + cubic model fit the data better than a model that only had the linear component? Please show/explain how it is or isn’t a better fit.  
+*Write your answer in the lines below:*
+
+
+
+## Q3F. Solve for a, b1 and b3 using linear algebra (hint: use the linear algebra functions from HW1). Save the calculated parameter values as “params_algebra” and output these values.  
+
+```{r}
+#params_algebra
+
+```
+
+
+## Q3G. Do your calculated parameters from 3f match the parameters from the quap model?  
+*Write your answer in the lines below:*
+
+
+## Q3H. Fit the model from 3a using the lm() function. Call this “mod3_lm” and output the summary (2 points). Do your calculated parameters from 3f match the parameters from lm?  
+
+```{r}
+#mod3_lm
+```
+*Write your answer in the lines below:*
+
+
+  
+**The code below performs a prior predictive check for a model predicting height using age for children.**  
+```{r}
+d3 = d[d$age<18,]
+N = 20
+a = rnorm(N, 100, 20)
+b = rexp(N, 1)
+
+
+plot(NULL, xlim=range(d3$age), ylim=c(0, 200), xlab="age", ylab="height")
+xbar = mean(d3$age)
+for(i in 1:N) {
+    curve(a[i] + b[i] * (x - xbar), from=min(d3$age), to=max(d3$age),
+          add=TRUE, col=col.alpha("black", 0.2))
+}
+```
+
+## Q3I. What problem with our priors is revealed thanks to this prior predictive check? What could we do to change our priors to address this issue?  
+*Write your answer in the lines below:*
+
+
+
+## Q3J. Now let's perform another prior predictive check for our model above (m4.5), which predicts height from weight (we'll pretend that we haven't fit the data to the model yet). We'll simulate 50 regression lines implied by the priors alone. Some of the code below is taken from the textbook (R code 5.4, page 126)
+
+```{r}
+
+# Sample from your priors using extract.prior() and call it "prior"
+prior <- extract.prior(m4.5)
+
+# Just as above, we'll define sequence of weights to compute predictions for
+# These values will be on the horizontal axis
+weight.seq.m4.5 <- seq( from=1 , to=70 , by=1 )
+weight_s.seq.m4.5 <- ( weight.seq.m4.5 - mean(d$weight) )/sd(d$weight) # Standardized
+weight_s3.seq.m4.5 <- weight_s.seq.m4.5^3 # For cubic term
+
+fit_data = data.frame(list(weight_s=weight_s.seq.m4.5,
+                           weight_s3=weight_s3.seq.m4.5))
+
+
+# Again, just as above, we'll use link() to compute mu for each sample from our *prior*
+# and for each weight in weight.seq
+sample_mu <- link( m4.5 , 
+                   post=prior, 
+                   data=fit_data )
+
+# Plot
+plot( NULL , xlim=c(1, 70) , ylim=c(-100, 300) , xlab="weight", ylab="height")
+
+for ( i in 1:50 ) {
+  lines( weight.seq.m4.5 , sample_mu[i,] , col=col.alpha("black",0.4) )
+} 
+
+```
+
+Do the priors allow for implausible heights? If so, suggest a modification to make the priors more reasonable.  
+*Write your answer in the lines below:*
+
+
+
+# Question 4: Splines vs. Polynomial Regression  
+  
+**What is the main advantage of using splines over polynomial regression?  What is a disadvantage of using a spline?**
+*Write your answer in the lines below:*
+
+
+
+# Question 5: Adding Predictors to a Model  
+
+**Is it always a good idea to add all potential predictor variables that you can think of into a multiple regression?  When will adding predictors help?  When will it hurt inference?**
+*Write your answer in the lines below:*
+
+
+
+# Question 6: Spurious Correlations, Masked Relations  
+
+The code below will create data for a spurious correlation, where the variable x_spur is spuriously correlated with y.
+```{r}
+set.seed(2026)
+N <- 100   #number of cases
+x_real <- rnorm(N) #x_real as Gaussian with mean = 0 and std = 1
+x_spur <- rnorm(N, x_real) #x_spur as Gaussian with mean = x_real
+y <- rnorm(N, x_real) #y as Gaussian with mean = x_real
+d <- data.frame(y, x_real, x_spur) #bind them all together
+#make a scatterplot
+pairs(d)
+```
+
+
+## Q6A. Please draw a DAG for this spurious relationship using the daggity package. Call this DAG “dag_6A”.  
+
+```{r}
+#dag_6A <- dagitty( "dag{  }" )   # setting up the DAG using dagitty()
+#coordinates(dag_6A) <- list( )   # specify the coordinates in your DAG
+#drawdag( dag_6A )    # draw the DAG
+```
+
+
+The code below will create data of a masked relationship between x and y.
+```{r}
+set.seed(2026)
+N <- 100     #number of cases
+rho <- 0.7   #correlation between predictors x_pos and x_neg
+x_pos <- rnorm(N) #x_pos as Gaussian
+x_neg <- rnorm(N, rho*x_pos, sqrt(1-rho^2)) #x_neg correlated with x_pos
+y <- rnorm(N, x_pos - x_neg) #
+
+d <- data.frame(y, x_pos, x_neg) #bind it all together
+pairs(d)
+```
+
+## Q6B. Now draw a DAG for this masked relationship using the daggity package. Call this DAG “dag_6B”.  
+
+```{r}
+#dag_6B 
+
+```
+
+
+## Q6C. What is the difference in the correlation structure, i.e., the correlation matrix between a spurious correlation and a masked correlation?  
+*Write your answer in the lines below:*
+
+
+
+## Q6D. How does changing rho, the correlation between the predictors x_neg and x_pos, change the amount of masking?  To answer this question, you will need to fit a  model (use lm for ease). Try values of rho = 0.7 and = 0.999. Set your seed to 2026 before *each* simulation.  
+
+```{r}
+#Test your values of rho here
+```
+  
+*Write your answer in the lines below:*  
+
+
+## Q6E. What are the dangers of interpreting a bivariate correlation matrix?  What do you really want to know about the relationship between variables?  
+*Write your answer in the lines below:*
+
+
+
+# Question 7: Randomized Controlled Experiments & Causal Inference for Non-Experiments  
+
+## Q7A. How do randomized controlled experiments allow for causal inference?  What do they do to DAG models?  
+*Write your answer in the lines below:*
+
+
+
+## Q7B. What needs to be done and what criteria need to be met to draw causal inferences from observational/non-experimental studies?  
+*Write your answer in the lines below:*
+
+
+
+# Question 8: Interpreting DAGs  
+
+**The code below will draw a DAG to be used for part A.**  
+
+```{r}
+dag_6M1 <- dagitty("dag{
+U [unobserved]
+V [unobserved]
+Y -> X
+X <- U -> B <- C -> Y
+U <- A -> C
+C <- V -> Y }")
+coordinates(dag_6M1) <- list(x=c(X=0,Y=2,U=0,A=1,B=1,C=2,V=2.5),
+y=c(X=2,Y=2,U=1,A=0.5,B=1.5,C=1,V=1.5) )
+drawdag(dag_6M1)
+```
+
+## Q8A. What paths, if any, need to be closed to draw causal inferences between the effect of Y -> X?  If there are problematic paths how do you close them?  What variables would you not want to condition on, if any? In this DAG can we draw a causal inference from Y -> X?  
+*Write your answer in the lines below:*
+
+
+
+**The code below will draw a DAG to be used for part B.**  
+
+```{r}
+dag_6H1 <- dagitty("dag{A -> D; A -> M -> D; A <- S -> D; S -> W -> D}")
+coordinates(dag_6H1) <- list(
+x=c(A=0,M=1,D=2,S=1,W=2),
+y=c(A=0.75,M=0.5,D=1,S=0,W=0) )
+drawdag(dag_6H1)
+```
+
+## Q8B. What paths, if any, need to be closed to draw causal inferences between the effect of M -> D?  If there are problematic paths, how do you close them?  What variables do you not want to condition on, if any? In this DAG can we draw a causal inference from M -> D?  
+*Write your answer in the lines below:*
+
+
+  
+# Question 9: Simpson’s Paradox  
+
+**For this question, run the code below to load in the dataframe ‘exercise_data’, which contains three variables: Cholesterol amount, Exercise amount, and Age of subjects.**  
+
+```{r}
+exercise_data <- read.csv('Age_Exercise_Cholesterol_for_HW2.csv')
+
+exercise_data_slim <- list(
+  Cholesterol = scale(exercise_data$Cholesterol),  
+  Exercise = scale(exercise_data$Exercise),
+  Age = scale(exercise_data$Age)  # for 9E
+)
+```
+
+## Q9A. Set your seed to 2026 and fit a Bayesian linear model that predicts Cholesterol (d.v.) with Exercise as the predictor (i.v.). Call this model “model_9A”, and output the coefficients using precis.  
+
+```{r}
+#model_9A
+
+```
+
+
+## Q9B. Do these results match what you might hypothesize about the relationship between cholesterol and exercise?  Do they make sense?  
+*Write your answer in the lines below:*
+
+
+
+## Q9C. Let’s explore our data further by including the other variable in our dataset, Age.  Create a scatterplot of Cholesterol (y-axis) vs. Exercise (x-axis) that colors individual points based on Age.  Keep this new scatterplot in mind and explain the Simpson’s paradox you observe.  
+
+```{r}
+#plot your data here
+
+```
+
+
+## Q9D. Draw a DAG using the daggity package to display how the variables of Cholesterol, Exercise, and Age are related. Call this dag “dag_9D”.  
+
+```{r}
+#dag_9D
+
+```
+
+## Q9E. Finally, reset your seed to 2026 and fit another Bayesian linear model that predicts Cholesterol (using Exercise and Age).  Call this model “model_9E” and output the coefficients using precis. Do the results of this model make more sense than the model with only Exercise as a predictor?  
+
+```{r}
+#model 9E
+
+```
+
+*Write your answer in the lines below:*
+
+
+
+# Question 10: Stroop Data  
+
+We are going to reexamine the Stroop data with an eye towards what we can learn about the causal structure, based on regressions. To start, we will focus on the following variables: “RT”, “Condition”, and “young_or_old”.
+
+## Q10A. First, draw a possible DAG that you think may describe the relationship between the 3 variables. Call this dag “dag_10A”. Are there any independencies between the variables, conditional or otherwise?  
+
+```{r}
+#dag_10A
+
+```
+
+*Write your answer in the lines below:*
+
+
+
+## Q10B. Set your seed to 2026 and run a Bayesian regression using quap to predict RT from Condition and young_or_old. Make sure to standardize (z-score) RT! Call this model “model_10B” and output a summary of the posterior using precis. Do the results align with your DAG? Are they consistent with any alternative causal structures, for example, those with hidden variables?  
+
+```{r}
+Stroop_Data <- read.csv('stroop_dataset_HW2.csv')
+
+#model_10B 
+```
+
+*Write your answer in the lines below:*
+
+
+
+Please see the Homework instructions document for more information about the new variable we will add to our model, "neural_accum".
+
+## Q10C. Reset your seed to 2026 and rerun the Bayesian model above, including “neural_accum” as an additional regressor. (The units of neural_accum are arbitrary, so make sure to standardize it as well)). Call this model “model_10C”, and output a summary of the posterior using precis.  
+
+```{r}
+#model_10C
+
+```
+
+
+
+## Q10D. What happened to the betas for Condition and young_or_old? What does this imply about the causal structure of these 4 variables?  
+*Write your answer in the lines below:*
+
+
+
+## Q10E. Draw a DAG that is consistent with this causal structure. Call this DAG “dag_10E”.  
+
+```{r}
+#dag_10E 
+
+```
+
+
+## Question 11: Your Research  
+
+## Q11A. Using your model and priors from Homework 1 question 11 where you wrote out a model for your research question, perform a prior predictive simulation of your model.  
+```{r}
+#your prior predictive simulation here
+
+```
+
+
+
+## Q11B. Do you like your choice of priors?  If not, what would you change?  
+*Write your answer in the lines below:*
+
+
+
+## Q11C. Write a causal model for your research question.  Think of and discuss what variables you might include in your causal model that would ruin your experiment.  This is true of both observational and experimental studies.  
+*Write your answer in the lines below:*
+
+
+
+
+## Q11D: Please respond to the set of questions that are applicable to your study below, based on whether your study is observational or experimental:  
+
+**If your study is an observational study**, what variables would you want to manipulate to de-confound your iv.'s of interest?  What are some variables you would not want to include in your multiple regression?  
+  
+*Write your answer in the lines below:*  
+
+  
+**If your study is an experimental study**, and you found related data in an observational study from a larger dataset, how might your i.v.'s now be confounded with other variables?  Would it be possible for you to condition on certain variables to de-confound them, or is causal inference not possible for your research question in an observational context (i.e., you would have to run an experiment)?  
+  
+*Write your answer in the lines below:*  
+
+
+
+
