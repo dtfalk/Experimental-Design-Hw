@@ -131,45 +131,45 @@ height.PI <- apply(sim.height, 2, PI, prob = 0.89)
 # use link to compute mu
 # for each sample from posterior
 # and for each weight in weight.seq
-mu <- link( m4.3 , data=data.frame(centered_weights=weight.seq) )
+mu <- link(m4.3 , data = data.frame(centered_weights = weight.seq))
 
 # summarize the distribution of mu
-mu.mean <- apply( mu , 2 , mean )
-mu.PI <- apply( mu , 2 , PI , prob=0.89 )
+mu.mean <- apply(mu, 2, mean) # 
+mu.PI   <- apply(mu, 2, PI, prob = 0.89)
 mu.HPDI <- apply(mu, 2, HPDI)
 
 # plot heighs vs. centered weights
-plot( height ~ centered_weights, d2 , col=col.alpha(rangi2,0.5))
+plot(height ~ centered_weights, d2 , col = col.alpha(rangi2, 0.5))
 
 # draw MAP line
-lines( weight.seq , mu.mean )
+lines(weight.seq, mu.mean)
 
 # draw HPDI region for line
-shade( mu.HPDI , weight.seq )
+shade(mu.HPDI, weight.seq)
 
 # draw PI region for simulated heights
-shade( height.PI , weight.seq )
+shade(height.PI, weight.seq)
 
 ```
 
 ## Q2A. What does the narrower shaded interval represent?  
 *Write your answer in the lines below:*
 
-The narrower band is the HPDI for mu, so it is the uncertainty around the mean height at each weight. It tells you where the regression line itself most plausibly sits given the data, not where individual people are.
+The narrower band is the HPDI for mu, so it is the uncertainty around the mean height at each weight. It is calculated as the narrowest band containing some proportion p of the posterior distribution. It tells you where the regression line itself most plausibly sits given the data, not where individual people are.
 
 
 
 ## Q2B. What does the wider shaded interval represent?  
 *Write your answer in the lines below:*
 
-The wider band is the 89% PI of simulated heights, which is the predictive interval for individual observations. It captures uncertainty in the mean PLUS the sigma noise around the line, so it's where you'd expect an actual person's height to land at a given weight.
+The wider band is the 89% PI of simulated heights, which is the predictive interval for individual observations. It captures uncertainty in the mean PLUS the sigma noise around the line, so for a fixed weight it is a plausible range where you'd expect an actual person's height to land.
 
 
 
 ## Q2C. What makes the narrower interval narrower, and the wider interval wider?  
 *Write your answer in the lines below:*
 
-The narrower one only reflects uncertainty in the posterior over a and b (the line itself). As you add more data that uncertainty shrinks and the interval gets tighter. The wider one has to include sigma on top of that, which is the variation of individuals around the mean, and that does NOT shrink when you add more data. So one is about "where is the line" (shrinks with n) and the other is "where are people" (bounded below by sigma).
+The narrower one only reflects uncertainty in the posterior over a and b (the line itself). As you add more data that uncertainty shrinks and the interval gets tighter. The wider one has to include sigma on top of that, which is the natural variation of individuals around the mean, and that does NOT shrink when you add more data, as there is always natural variation around a mean. So one is about "where is the line" (shrinks accd to sqrt(n)) and the other is "where are people" ("where is the line" +- the effect of sigma).
 
 
 
@@ -178,7 +178,7 @@ The narrower one only reflects uncertainty in the posterior over a and b (the li
 
 3 parameters: a, b, and sigma.
 a is the intercept, which with centered weight is the mean height of an adult at the average weight.
-b is the slope, the expected change in height for a one kg increase in weight.
+b is the slope, the expected unit in height for a unit increase in weight.
 sigma is the std of heights around the regression line, i.e. how much individual heights deviate from the predicted mean at a given weight.
 
 
@@ -242,6 +242,7 @@ b3 ~ Normal(0, 1)
 sigma ~ Uniform(0, 50)
 
 Note: there is NO b2 * weight_s^2 term. The model skips the squared term and goes straight from linear to cubic.
+Is this bc odd poyltnomials are symetric aroiund the origin? (ie f(-x) = -f(x))
 
 
 ## Q3B. What are the units of b1 and b3?  
@@ -264,6 +265,7 @@ a, b1, b3 compose the mean function (the deterministic part of mu), which is a c
 ## Q3D. Set your seed to 2026 and fit another model with only a linear component to these data using quadratic approximation. Save this model as “mod3_quap” and output the summary using the precis() function. Plot the model using the code we provided above and compare.  
 
 ```{r}
+# TODO: Double check this
 #mod3_quap
 
 # Set seed
@@ -337,7 +339,7 @@ X <- cbind(intercept_column, weight_s_col, weight_s3_col)
 # y is just height
 y <- d$height
 
-# Moore-Penrose pseudoinverse, same as HW1 10G
+# Moore-Penrose pseudoinverse, same as HW1
 params_algebra <- ginv(t(X) %*% X) %*% t(X) %*% y
 
 # Print
@@ -349,7 +351,7 @@ params_algebra
 ## Q3G. Do your calculated parameters from 3f match the parameters from the quap model?  
 *Write your answer in the lines below:*
 
-They are very close but not exactly identical. The quap values for a, b1, b3 are essentially the same as the linear algebra estimates to within a small amount. The tiny differences come from the priors pulling the quap estimates slightly toward the prior means (a ~ Normal(178,20), b1 ~ LogNormal(0,1), b3 ~ Normal(0,1)). With this much data the data dominates and the priors barely move things, so they basically match.
+They are very close but not exactly identical. The quap values for a, b1, b3 are essentially the same as the linear algebra estimates to within a small amount. The tiny differences come from the priors pulling the quap estimates slightly toward the prior means (a ~ Normal(178,20), b1 ~ LogNormal(0,1), b3 ~ Normal(0,1)). However there is a lot of data and somewhat loose prirors so they basically match.
 
 
 ## Q3H. Fit the model from 3a using the lm() function. Call this “mod3_lm” and output the summary (2 points). Do your calculated parameters from 3f match the parameters from lm?  
