@@ -1,0 +1,1033 @@
+---
+title: "HW1 Template"
+name: "David Falk"
+worked with: "NA"
+AI disclosure: "Writing this as I go. I will just do single sentences: 1. Help me setup R in VS Code 2. Identify the correct term for task in 1C because I forgot the name (multi-armed bandit) 3. Size of Numeric types in R (was worried about N choose K overflow)" 
+
+output: html_document
+---
+Due: Friday, 4/10/2026 by 11:59pm  
+166 points  
+Topics: Intro to Bayesian data analysis, Problems with NHT, Prediction vs. Explanation, Linear Models  
+  
+Please turn in this assignment on Canvas.  You should turn in your .Rmd file, i.e., your R markdown file, as well as the corresponding .html (i.e., the knitted R markdown file).  
+  
+If you worked with someone on these homework please list them above under your name.  
+
+**Worked with:** NA  
+**AI disclosure:** Writing this as I go. I will just do single sentences: 1. Help me setup R in VS Code 2. Identify the correct term for task in 1C because I forgot the name (multi-armed bandit) 3. Size of numeric types in R (was worried about n choose k overflow)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+set.seed(1)  # Ensures reproducible results
+library(ggplot2)
+library(tidyverse)
+theme_set(theme_minimal())  # My personal preference for less ugly default plots
+
+```
+  
+# Question 1 (30 points total)  
+## 1A.  
+*Using the logic of McElreath, show how different hypotheses may map onto the same process models and subsequent statistical models (5 points)?*  
+
+Given two or more hypotheses, there are plenty of causal frameworks that are consistent with all of those hypotheses at the same time.
+
+For example, let's say that I tend not to hang out with people on Fridays. After some investigation my friends discover it is because I do community service early every Saturday morning.
+
+In this case the Process Model/Causal explanation can be written as...
+  Process Model: David avoids hanging out on Fridays so that he can be well-rested for his community service on Saturdays.
+
+This may make them curious about what this says about me. One potential explanation (Hypothesis 1) is that I am a good guy who cares about his community. Another potential explanation (Hypothesis 2) is that I got a DUI and and was sentenced to community service. In terms of hypotheses we would get...
+  H1: David is a good guy who cares about his community.
+  H2: David is a bad guy with a DUI and court-mandated community service.
+
+Both hypotheses align with the process model, and would further align with the following statistical model...
+  Statistical Model: We are statistically more likely to receive a "Sorry can't hang tonight :(" text from David on Fridays as opposed to other days of the week.
+
+In any event, the process model/statistical model are equally well explained by each hypothesis. Since both hypotheses generate the same process model and the same observable statistical pattern, we cannot distinguish between them using the data alone.
+
+
+
+
+
+  
+## 1B.  
+*How does this make Null Hypothesis Statistical Testing problematic?  What is a better approach? (10 points)*  
+This creates a problem for an NHST approach because NHST can only directly test whether some data is consistent with a **statisical model**, although many people assume that they are testing underlying hypotheses. When you do something like a t-test you are forced to confound the hypothesis, which is typically a natural language phrase, with the statistical model(s) derived from that hypothesis (derived via the process model(s)).
+
+One of McElreath's points is that multiple hypotheses can map to the same statistical models. If this happens then NHST cannot tell the the difference between a hypothesis being correct (in the sense that the world *actually* works that way) and a hypothesis being incorrect but still modeled by the same statistical model (consistent). Without further information, NHST gives you no way to test between any of these colliding hypotheses. 
+
+
+A better approach is to use a Bayesian approach (or similar) that can provide information about the relative plausibility of different hypotheses by allowing us to estimate P(Model #n | Data) via (P(Data | Model #n) * P(Model #n)) / P(Data) and compare the relative probabilities of each model given the data. Since P(Data) is independent of model (not conditioned on it) we can just calculate P(Data | Model n) * P(Model n) for each model and do the same relative comparison. Using the example from the first question we can define the following variables...
+
+  Model 1 = David is a good guy who cares about his community.
+  Model 2 = David is a bad guy with a DUI and court-mandated community service.
+  Data = David declines invitations for Friday night hangs.
+  
+Although P(Data | Model 2) and P(Data | Model 1) are roughly equal since each hypothesis implies the same outcome, different values for P(Model 1) and P(Model 2) would result in different values for P(Model 1 | Data) and P(Model 2 | Data), which are the values of interest. It is left to the reader to decide the relative values of P(Model 1) and P(Model 2).
+
+## 1C.  
+*Describe an example in Psychology or Neuroscience where a Null hypothesis and an Alternative hypothesis map onto the same process and statistical model.  Please use a different example than the Stroop example that was talked about in lecture.  It would be good if you could think of a real example, but if you’re having trouble you can invent one. (10 points)*  
+
+Data: In multi-armed bandit tasks old people appear to learn slower than younger people (according to whatever metric was used to define "learning rate").
+Null Hypothesis: Old people are slower learners
+Alternative Hypothesis: Old people are not slower learners
+The answer: Old people are not necessarily slower learners. They are, however, less interested in task-specific rewards (e.g. money) and explore more, which results in the learning metric appearing lower.
+If you allow an exploration metric then you'd see, roughly, that there is a learning/exploration tradeoff.
+ 
+
+## 1D.
+*Based on lecture and the Cohen reading, what are two problems with the use of p-values?  What is one solution as specified in lecture or the Cohen reading (more than just don’t use p-values)? (5 points)*
+There are a few issues with P Values...
+  1) Their definition can be confusing which causes people to misinterpret them which causes people to misuse them which causes bad science.
+  2) They don't actually rule out or confirm any hypotheses. They just tell you "In the world that the null hypothesis is true and we can assume normality, then how often would we see data that is at-least this extreme".
+  3) Sort of paraphrasing here, but they are hypothesis-bound. There are many cases when there is a low p-value and people assume that the hypothesis itself is unlikely. However, if you were to take a Bayesian approach and include a suite of other hypotheses (assuming you have a reasonable estimate of priors), then you might find that the original hypothesis is actually quite likely.
+
+Cohen offers up a couple of ideas, and I am not sure if he says this explicitly because he seemed rather unoptimistic about the prospects, but I would argue that the long term solution he would argue for is that people should actually understand the statistics they are using put time and thought into whether the equations they invoke are *actually* suitable for the intended use case. He spends some time mapping out the inferential mistakes made by people who do not understand p-values (modus tollens/ponens section) and leads into trying to get people to understand the value of power analyses / effect sizes, but the issue really does seem to lie with a misunderstanding/carelessness in understanding the math/statistics being used. If you treat your statistical tests like a zoo/flow chart then you will be making the same mistakes, except now those mistakes are Bayesian instead of frequentist. If people don't understand the statistics, then they will never understand why they would need something like a power analysis, which Cohen illustrates via Oakes's quote: "After all, why worry about the probability of obtaining data that will lead to the rejection of the null hypothesis if it is false when your analysis gives you the actual probability of the null hypothesis being false?"
+
+# Question 2 (10 points)  
+## 2A.  
+*According to Yarkoni and Westfall, 2017, does Psychology and Neuroscience suffer from an overfitting or underfitting problem?  What drives this problem?  How is this problem related to the replication crisis in Psychology? (5 points)*  
+They argue that Psychology suffers from an overfitting problem and that there are many issues driving this problem. 
+
+One contributing factor is p-hacking and procedural overfitting. Researchers will selectively report significant results and tend to report results that are specific to their current dataset: "The impact of p-hacking on the production of overfitted or spurious results is hard to overstate" (4).  
+
+Another contributing factor is small sample sizes. If n is low then it is easier to mistake noise for a significant result.
+
+They also argue that scientists have placed too much emphasis on building explanative models as opposed to predictive models. When your emphasis is just fitting models to data then you are more prone to just picking the most explanatory model, regardless of if it generalizes to new or holdout data.
+
+All of these contribute to the over fitting problem because they result in models that do not generalize. In general, overfitted models result in reporting noise that is specific to one dataset. When the study is repeated there is a good chance that the noise will be absent and thus the findings will not replicate.
+
+## 2B.  
+*Explain 3 solutions to help to counteract the problem you described in Part A. Does p-hacking cause overfitting, underfitting or both? (5 points)*  
+
+They argue for placing more emphasis on predictive models as opposed to explanatory models. When you focus on building your model to generalize to new data, then you are more likely to produce models that will replicate.
+
+The three main procedural ways they argue to fix this is via cross-validation (testing models/predictions on held out data), larger sample sizes (mitigating the likelihood of spurious correlations), and limiting model complexity (addresses parameter manipulation and thus overfitting by minimizing the extent to which the model can chase noise).
+
+P hacking results in overfitting because it involves researchers being overly flexibile in their analyses (e.g. including too many parameters to increase r score), researchers selectively reporting significant results, and makes models that may have a low p value but will fail to generalize to new data. 
+
+  
+# Question 3 (10 points)  
+Which of the following represents the probability that “it is sunny on Friday”? Modify the q3 vector to match your choices.  
+  
+A. P(Friday | Sunny)  
+B. P(Sunny | Friday)  
+C. P(Sunny & Friday)  
+D. P(Friday & Sunny) / P(Friday)  
+E. [P(Friday | Sunny) * P(Sunny)] / P(Friday)  
+  
+
+```{r Q3}
+# There are different ways to interpret this statement... but
+# I assume this means "On this upcoming Friday, what are the odds that it will be sunny"
+# So GIVEN this friday, what are the odds that it will be sunny.
+# Thus we want to find P(Sunny | Friday)
+# Here are the equalities of interest....
+#   P(Sunny & Friday) = P(Sunny | Friday) * P(Friday) = P(Friday | Sunny) * P(Sunny)
+# Dividing by P(Friday) and moving left to right through the above equalities gives us.... 
+#      1. P(Sunny & Friday) / P(Friday)              [Option "D"]
+#      2. P(Sunny | Friday)                          [Option "B"]
+#      3. (P(Friday | Sunny) * P(Sunny)) / P(Friday) [Option "E"]
+
+q3 <- c("B", "D", "E")
+q3
+```
+
+  
+# Question 4 (10 points)  
+*Suppose that you have one model globe of the Earth and one model globe of Mars. The Earth globe is covered in 70% water and 30% land. The Mars globe is covered in 1% water and 99% land. Suppose that one of your friends picks one of these globes at random and tosses it in the air and tells you that her right index finger is touching water.  For the calculations below, please show all math in your RMD document.*  
+  
+## 4A.  
+*Given this knowledge, what is the probability that your friend tossed the Earth globe?  Call this variable “P1” in your code and output the result of your calculation. (5 points)*  
+  
+```{r}
+# %%
+# Full setup:
+# There are four potential situations here:
+#     Situation 1: Outcome = Water, Planet = Earth 
+#     Situation 2: Outcome = Water, Planet = Mars 
+#     Situation 3: Outcome = Land,  Planet = Earth 
+#     Situation 4: Outcome = Land,  Planet = Mars  
+#     
+#     P(Water & Earth) = P(Water | Earth) * P(Earth) = P(Earth | Water) * P(Water)
+#     P(Water & Mars)  = P(Water | Mars) * P(Mars)   = P(Mars | Water) * P(Water)
+#     P(Land & Earth)  = P(Land | Earth) * P(Earth)  = P(Earth | Land) * P(Land)
+#     P(Land & Mars)   = P(Land | Mars) * P(Mars)    = P(Mars | Land) * P(Land)
+#     
+# 
+# 
+# Planets = {Earth, Mars}: 
+#     P(Earth) = 0.50 
+#     P(Mars) = 0.50
+# 
+# 
+# Outcomes = {Land, Water}: 
+#     
+#     CONDITIONAL WATER PROBABILITIES
+#     P(Water | Earth) = 0.70 
+#     P(Water | Mars)  = 0.01 
+# 
+#     CONDITIONAL LAND PROBABILITIES
+#     P(Land | Earth) = 0.30 
+#     P(Land | Mars) = 0.99 
+# 
+#     WATER PROBABILITY
+#     P(Water) = (P(Water | Earth) * P(Earth)) + (P(Water | Mars) * P(Mars))
+#              = (P(Water | Earth) * 0.5) + (P(Water | Mars) * 0.5)
+#              = (P(Water | Earth) + P(Water | Mars)) * 0.5
+#              = (P(Water | Earth) + P(Water | Mars)) / 2
+#              = (0.70 + 0.01) / 2
+#              = 0.71 / 2
+#     P(Water) = 0.355
+#              
+#     LAND PROBABILITY       
+#     Since P(Land) + P(Water) = 1 can see that...
+#     P(Land) = 1 - P(Water)
+#             = 1 - 0.355
+#     P(Land) = 0.645
+#              
+#              
+#   So... 
+#         P(Water) = 0.355
+#         P(Land) = 0.645             
+#              
+#  Now that we have numerical values for 3 out of 4 variables for all of the equations, we can proceed quite easily...            
+#               ======================================
+#                  RELEVANT EQUATIONS FOR 2A and 2B  
+#               ======================================
+#   2A]
+#     P(Earth | Water) = (P(Water | Earth) * P(Earth)) / P(Water)  
+#   2B]
+#     P(Mars | Land) = (P(Land | Mars) * P(Mars)) / P(Land)                    
+
+# Planet Probs
+P_Earth <- 0.5
+P_Mars <- 0.5
+
+# Conditional Water Probs
+P_Water_given_Earth <- 0.70
+P_Water_given_Mars <- 0.01
+
+# Unconditional Water Prob
+P_Water <- (P_Water_given_Earth * P_Earth) + (P_Water_given_Mars * P_Mars)
+
+# P(Earth | Water)
+P_Earth_given_Water <- (P_Water_given_Earth * P_Earth) / P_Water
+
+# Assign value to required variable name
+P1 <- P_Earth_given_Water 
+
+# Print it
+P1
+```
+  
+## 4B.  
+*Your friend tosses a globe and her right index finger is touching land.  Given this information, what is the probability that your friend tossed the Mars globe?  Call this variable “P2” in your code and output the result of your calculation. (5 points)*  
+   
+```{r}
+# Conditional Land Probs
+P_Land_given_Earth <- 0.30
+P_Land_given_Mars <- 0.99
+
+# Unconditional Land Prob
+P_Land <- 1 - P_Water
+
+# P(Mars | Land)
+P_Mars_Given_Land <- (P_Land_given_Mars * P_Mars) / P_Land
+
+# Assign value to required variable name
+P2 <- P_Mars_Given_Land 
+
+# Print it
+P2
+```
+  
+# Question 5 (10 points)  
+*The RMD template document for this assignment contains a section of code that executes the Rasmus Bath example from class. This chunk of code shows you how to calculate the posterior distribution for the probability of signing when your observation was that 6 out of 16 people signed up.*  
+  
+```{r, eval=FALSE}
+# Here is the code for the Rasmus Bath example where we were assessing how many people signed up for our salmon shipping service.  
+# The first chunk of code shows you how to calculate the posterior distribution for the probability of signing when you observed 6 people signing up out of 16 
+
+# Try to perform the same simulation but this time using McElreath's grid approximation technique and sampling from the posterior. Call the variable with the posterior distribution posterior_grid.
+
+# Number of random draws from the prior
+n_draws <- 10000
+
+set.seed(2026)
+
+# This prior is our prior belief of the number of Danes that will buy our fish
+
+# List of priors of length n_draws obtained by sampling the uniform 
+#   distribution from (min, max) [NON INCLUSIVE]
+prior <- runif(n_draws, min = 0, max = 1)
+
+# Histogram of the list of priors to ensure no funny business
+hist(prior) 
+
+# Given a prior (theta)
+generative_model <- function(theta) {
+
+  # Samples one observation of 16 hypothetical customers with prior = theta
+  # Output is integer representing number of buyers
+  num_buy <- rbinom(1, 16, theta)
+  return(num_buy)
+}
+
+# Here you simulate data using the parameters from the prior and the 
+# generative model
+sim_data <- rep(NA, n_draws)
+for(i in 1:n_draws) {
+  sim_data[i] <- generative_model(prior[i])
+}
+
+# Here you filter off all draws that do not match the data.
+# From our data we had 6 yes out of 16 people
+posterior <- prior[sim_data == 6] 
+
+# Eyeball the posterior
+hist(posterior) 
+
+# Confirm that we got enough draws left after the filtering.
+length(posterior)
+ 
+# There are no rules here, but you probably want to aim
+# for >1000 draws.
+
+# Now you can summarize the posterior, where a common summary is to take the mean
+# or the median posterior, and the 95% credible interval.
+median(posterior)
+mean(posterior)
+max(posterior)
+quantile(posterior, c(0.025, 0.975))
+```
+  
+## 5A.  
+*Write a chunk of code that uses McElreath’s grid approximation approach to estimate the posterior. Have 1000 evenly-spaced points in the grid. Save the posterior distribution as “posterior_grid”. (5 points)*  
+  
+```{r}
+
+# HELPER FOR `run_rasmus_bath_grid()`
+# Given a prior P(buyer) from the grid, compute P(n buyers) given M > n people
+# Assumes total_people > total_buyers without checking
+# (Note: may overflow if total_people is too large... but R uses double precision for numeric iirc)
+prob_exact_buyers <- function(p, total_buyers, total_people) {
+  
+  # Get total non buyers up front for convenience
+  total_non_buyers <- total_people - total_buyers
+
+  # Ways to to choose total_buyers buyers from total_people people
+  # This is just the binomial coefficient
+  ways_to_choose <- factorial(total_people) / (factorial(total_buyers) * factorial(total_non_buyers))
+
+  # Get weighted likelihood of choosing exactly total_buyers buyers from total_people people
+  #   with P(person is a buyer) = p
+  likelihood <- ways_to_choose * (p ** total_buyers) * ((1 - p) ** (total_non_buyers))
+
+  return(likelihood)
+}
+
+run_rasmus_bath_grid <- function(num_grid_points, total_buyers = 6, total_people = 16, min_search = 0, max_search = 1){
+
+  # Define the grid of priors as a list prior_grid where prior_grid[i] = [i / num_grid_points] 
+  #   for i ranging from 1 to num_grid_points (inclusive) so that we mimic the exact behavior 
+  #   of runif from example which DOES NOT RETURN 0 or 1
+  # For example, if num_grid_points = 1000 then we get...
+  #     i = 1     ==> 1 / 1001  
+  #     i = 2     ==> 2 / 1001
+  #     . 
+  #     .
+  #     .
+  #     i = 999   ==> 999 / 1001  
+  #     i = 1000  ==> 1000 / 1001  
+  
+  # Initialize grid
+  prior_grid <- rep(NA, num_grid_points)
+  for (i in 1:num_grid_points) {
+    prior_grid[i] <- i / (num_grid_points + 1)
+  }
+
+  # Scale prior grid into (min_search, max_search) interval (NON INCLUSIVE)
+  range <- max_search - min_search
+  prior_grid <- min_search + (range * prior_grid)
+
+  # Iterate over the prior grid and calculate P(exactly 6 buyers | prior_grid[i])
+  likelihood_grid <- rep(NA, num_grid_points)
+  for (i in 1:num_grid_points) {
+    likelihood_grid[i] <- prob_exact_buyers(prior_grid[i], total_buyers, total_people)
+  } 
+
+  # Let Data = Exactly 6 buyers out of 16 total people
+  # We want P(prior_grid[i] is pop mean) which should be proportional to...
+  #   P(Data | prior_grid[i]) * P(prior_grid[i]) where P(prior_grid[i]) = 1 / n_grid_points
+  posterior_grid_unnormalized <- likelihood_grid * (1 / num_grid_points)
+
+  # Normalize to get final posterior grid
+  posterior_grid <- posterior_grid_unnormalized / sum(posterior_grid_unnormalized)
+
+  # Return the prior and posterior grids
+  return(list(prior_grid = prior_grid, posterior_grid = posterior_grid))
+}
+
+# Run the rasmus bath grid function with 1000 grid points, 6 buyers and 16 total people over (0, 1)
+# Most of these are the default function values
+grid_result <- run_rasmus_bath_grid(num_grid_points = 1000)
+
+# Unpack grid result into prior and posterior
+prior_grid <- grid_result$prior_grid
+posterior_grid <- grid_result$posterior_grid
+```
+  
+## 5B.  
+Use “posterior_grid” to generate 10,000 samples from the posterior and calculate and output the following values:  
+- “med5” (posterior median) (1 point)  
+- “mn5” (posterior mean) (1 point)  
+- “mx5” (posterior max) (1 point)  
+- “CI5” (the 95% credible interval of the posterior, formatted as a vector) (2 points)  
+  
+```{r}
+
+# Take num_samples samples from a prior with posterior weights
+# Optional seed argument defaults to 2026 but can be set to NA if reproducability not desired
+sample_distribution <- function(num_samples, prior, posterior, seed = 2026) {
+
+  # Set seed if NA is not provided
+  if (!is.na(seed)) {
+    set.seed(seed)
+  } 
+
+  # Take samples prior grid with posterior grid as the prob weights
+  samples <- sample(prior, num_samples, replace = TRUE, prob = posterior)
+
+  # Return da samples
+  return(samples)
+}
+
+# Gets summary stats of 1d numeric vector
+get_sample_stats <- function(samples, ci_range_start = 0.025, ci_range_end = 0.975) {
+
+  # Get sample stats
+  sample_median <- median(samples)
+  sample_mean   <- mean(samples)
+  sample_max    <- max(samples)
+  sample_min    <- min(samples)
+  sample_mode   <- mode(samples)
+  sample_std    <- sd(samples)
+  sample_CI     <- quantile(samples, c(ci_range_start, ci_range_end))
+
+  # Return sample stats
+  return(list(sample_median = sample_median,
+              sample_mean   = sample_mean,
+              sample_max    = sample_max,
+              sample_min    = sample_min,
+              sample_mode   = sample_mode,
+              sample_std    = sample_std,
+              sample_CI     = sample_CI
+            )
+        ) 
+}
+
+# Get the samples
+posterior_samples <- sample_distribution(10000, prior_grid, posterior_grid)
+
+# Get sample stats
+sample_stats <- get_sample_stats(posterior_samples)
+
+# Unpack desired stats
+med5 <- sample_stats$sample_median
+mn5  <- sample_stats$sample_mean
+mx5  <- sample_stats$sample_max
+CI5  <- sample_stats$sample_CI
+
+# Histogram of posterior
+hist(posterior_samples) 
+ 
+# Print values
+med5
+mn5
+mx5
+CI5
+```
+  
+# Question 6 (10 points)  
+*Let’s imagine we’ve just received information from the CEO in the Rasmus Bath example that the signup rate in Denmark is usually between 5-15%.*  
+  
+## 6A.  
+Using this new knowledge, recode your Rasmus Bath example. You can either use the original Bath structure from the code given in Q5, or execute this McElreath’s way using grid approximation (using 100 as the length of the grid). For whichever option you choose, set your seed to 2026, calculate the posterior, and then generate 10,000 samples from the posterior (2 points) and calculate and output the following values:  
+- “med6” (posterior median) (1 point)  
+- “mn6” (posterior mean) (1 point)  
+- “mx6” (posterior max) (1 point)  
+- “CI6” (the 95% credible interval of the posterior, formatted as a vector) (2 points)  
+
+```{r}
+
+# NOTE: 
+# run_rasmus_bath_grid() is deterministic
+# sample_distribution() sets seed to 2026 as a default
+# No need to call set.seed(2026) explicitly in this block
+
+
+# Get grid search result with 100 grid points searching from 5% to 15%
+grid_result_6 <- run_rasmus_bath_grid(num_grid_points = 100,
+                                      min_search      = 0.05,
+                                      max_search      = 0.15)
+
+# Extract prior and posterior grids
+prior_grid_6 <- grid_result_6$prior_grid
+posterior_grid_6 <- grid_result_6$posterior_grid
+
+# Get 10000 samples
+samples_6 <- sample_distribution(num_samples  = 10000,
+                                 prior        = prior_grid_6,
+                                 posterior    = posterior_grid_6)
+
+# Get sample statistics
+sample_stats_6 <- get_sample_stats(samples = samples_6)
+
+# Unpack into values
+med6 <- sample_stats_6$sample_median
+mn6  <- sample_stats_6$sample_mean
+mx6  <- sample_stats_6$sample_max
+CI6  <- sample_stats_6$sample_CI
+
+# Histogram the samples
+hist(samples_6)
+
+# Print values
+med6
+mn6
+mx6
+CI6
+```
+
+## 6B.
+*How has your recoding changed your prediction for the number of signups from your result in Q5? (3 points)*  
+No that we have conditioned on the value of p being between 0.05 and 0.15, the most likely values are right around 0.15. The plotted histogram apepars to be monotonically increasing. This makes sense because the unconditioned one in problem 5 was normal with mean of ~0.4 so you'd expect monotonically increasing values as you approach 0.4 from the left. We have a CI of [0.082, 0.149] centered around 0.127 with median 0.132 with the max being ~0.15.
+
+  
+# Question 7 (10 points)  
+*Code for a grid approximation is written in your RMD template.  Please use it to answer the following questions:*  
+  
+```{r}
+
+# Seed it
+set.seed(2026)
+
+# Create grid on (0, 1) with 1000 steps
+p_grid <- seq(from = 0, to = 1, length.out = 1000)
+
+# Initialize prior vector
+prior <- rep(1, 1000)
+
+# Get likelihood vector
+likelihood <- dbinom(6 , size = 9 , prob = p_grid)
+
+# Get posterior as above
+posterior <- likelihood * prior
+
+# Normalize 
+posterior <- posterior / sum(posterior)
+
+# Set seed again?
+set.seed(100)
+
+# Sample the prior with weights from posterior with replacements
+# Get 10000 samples
+samples <- sample(p_grid, prob = posterior, size = 10000, replace = TRUE)
+```
+  
+## 7A.  
+*What proportion of the posterior probability lies below p = 0.35?  Calculate this value (call it “A7”) and output the result. (2 points)*  
+```{r}
+
+# Function to calculate percent of posterior distribution below a given value p
+# Assumes posterior is normalized
+# This is just CDF
+# We can always get percent above a given p via 1 - percent_below_given_p()
+percent_below_given_p <- function(p, p_grid, posterior) {
+  return(sum(posterior[p_grid <= p]))
+}
+
+A7 <- percent_below_given_p(0.35, p_grid, posterior)
+A7
+```
+  
+## 7B.  
+*10% of posterior probability lies above what value of p?  Calculate this value of p (call it “B7”) and output the result. (2 points)*  
+```{r}
+# Function to calculate value of p for which a given percent of values falls below
+# Assumes posterior is normalized
+# Once again can get p given percent above by taking 1 - percent above and using this 
+# NOTE: Works for grid but may not generalize if needed later
+p_given_percent_below <- function(percent, p_grid, posterior) {
+
+  # Iterate over prior values
+  for (i in 1:length(p_grid)) {
+    
+    # Return the first value in the prior grid such that it is greater than the desired percent
+    if (percent_below_given_p(p_grid[i], p_grid, posterior) >= percent) {
+      return(p_grid[i])
+    }
+  }
+}
+
+B7 <- p_given_percent_below(0.90, p_grid, posterior)
+B7
+```
+  
+## 7C.  
+*The highest density 50% of the posterior probability lies between what values of p?  Call this variable “C7” and output the result. (2 points)*  
+```{r}
+
+# # Function to calculate value highest density window of size window_size (value in the interval (0, 1))
+# # Returns max posterior probability density for a given window size and indices of max density window's start/end indices
+# # NOTE: WILL NOT HANDLE NON UNIQUE MAX DENSITY WINDOWS... will return the FIRST window of max density if non unique
+# get_highest_density_window <- function(p_grid, posterior, window_size) {
+  
+#   # Initialize max val trackers
+#   max_start   <- 1
+#   max_end     <- floor(length(p_grid) * window_size)
+#   max_density <- -1
+
+#   # Get the desired window size in terms of number of p_grid indices
+#   frames_per_window <- floor(length(p_grid) * window_size)
+
+#   # Iterate over window start positions 
+#   for (cur_start in 1:(length(p_grid) - frames_per_window + 1)) {
+    
+#     # Define window end
+#     cur_end <- cur_start + frames_per_window - 1
+    
+#     # Get the density of posterior probability in the current window
+#     cur_density <- sum(posterior[cur_start:cur_end])
+
+#     # Update max val trackers if cur > max
+#     if (cur_density > max_density) {
+#       max_start   <- cur_start
+#       max_end     <- cur_end
+#       max_density <- cur_density
+#     }
+#   }
+
+#   # Return max density and indices of max density window's start/end
+#   return(list(lower_bound_p = p_grid[max_start], upper_bound_p = p_grid[max_end]))
+# }
+
+# Get the results and print
+C7 <- HPDI(samples, prob = 0.5)
+C7
+```
+  
+*Code for another grid approximation using a different prior appears in your RMD template after parts 7A-7C.  Please use this new code to answer the following questions:*  
+```{r}
+p_grid <- seq(from = 0, to = 1, length.out = 1000)
+prior <- dbeta(p_grid, 7, 30) 
+likelihood <- dbinom(6, size = 9, prob = p_grid)
+posterior <- likelihood * prior
+posterior <- posterior / sum(posterior)
+set.seed(100)
+samples <- sample(p_grid, prob = posterior , size = 1e4 , replace = TRUE)
+```
+  
+## 7D.  
+*What value is our new prior centered on?  Calculate this value (call it “D7”) and output the result. (2 points)*  
+```{r}
+
+# Mean of Beta is just alpha / (alpha + beta)
+alpha <- 7
+beta <- 30
+D7 <- alpha / (alpha + beta)
+D7
+```
+  
+## 7E.  
+*What proportion of the posterior probability lies below p = 0.35?  Calculate this value (call it “E7”) and output the result. (2 points)*  
+```{r}
+
+# Get value from the function I made earlier and print
+E7 <- percent_below_given_p(0.35, p_grid, posterior)
+E7
+```
+  
+## 7F.  
+*10% of posterior probability lies above what value of p? Calculate this value of p (call it “F7”) and output the result. (2 points)*  
+```{r}
+
+# Same deal but 1 minus p
+F7 <- p_given_percent_below(0.90, p_grid, posterior)
+F7
+```
+  
+## 7G.  
+*The highest density 50% of the posterior probability lies between what values of p?  Call this variable “G7” and output the result. (2 points)*  
+```{r}
+G7 <- HPDI(samples, prob = 0.5)
+G7
+```
+  
+# Question 8 (15 points)  
+  
+## 8A.  
+*Label the likelihood and the priors in the above model definition. Assign “def1”, “def2”, and “def3” to the proper variables below in your RMD document. (2 points)*  
+```{r Q8}
+
+# Model of mean/std
+def1 <- 'y(i) ~ Normal(mu, sigma)'
+
+# Prior on the mean
+def2 <- 'mu ~ Normal(5, 30)' 
+
+# Prior on std
+def3 <- 'sigma ~ Beta(3,25)'
+
+likelihood  <- def1
+mu_prior    <- def2
+sigma_prior <- def3
+
+likelihood
+mu_prior
+sigma_prior
+```
+  
+## 8B.  
+*How many parameters are in the posterior distribution for the above model?  Assign a numeric value to the variable ‘n_params’ in your RMD document. (2 points)*  
+```{r}
+
+# Mu and Sigma
+n_params <- 2
+n_params
+```
+
+  
+## 8C.  
+*Using the model definition above, write down the appropriate form of Bayes' Theorem that includes the proper likelihood and priors. (3 points)*  
+P(mu, sigma | y) = (P(y | mu, sigma) * P(mu) * P(sigma)) / P(y)
+       where P(y) is the integral of numerator wrt mu and sigma so in this case its a double integral
+
+In general it is.... 
+    Posterior = (Likelihood * (Product over the parameter priors)) / evidence (integral over numerator wrt each parameter or integrate scalar density against wedge product for diff form approach)
+  
+  
+## 8D.  
+Imagine now a different model definition with the following pieces:  
+y(i) ~ Normal(mu, sigma)  
+mu = alpha + Beta*x(i)  
+alpha ~ Normal(5, 30)  
+Beta ~ Normal(1,5)  
+sigma ~ Beta(3,25)  
+How many parameters are in this model? Are any of our priors strange or inappropriate? (5 points)  
+
+3 explicitly... sigma, Beta and alpha
+Well theyre named weird. In particular naming a parameter Beta and then also using the Beta distribution to define sigma is confusing.
+Beta is defined on (0, 1) so that is a weird restriction on the std of a normal distribution but thats ur life you live it to the fullest.
+
+  
+## 8E.  
+*When we generate samples of the parameters from the posterior after fitting the model in 8.D, what do these samples represent? Think about how the parameters relate to the data they are trying to describe. (3 points)*  
+  Each posterior sample is a set of parameters of the form (alpha, Beta, sigma) after updating the model with some data and assuming some linear relationship of the form y = mx + b.
+  Each sample provides a possible intercept (alpha), a slope (Beta) that relates y(i) to x(i) and a standard deviation (sigma) for y(i) around the line y = Beta * x(i) + Alpha.  
+  So it seems each (alpha, Beta, sigma) represents a model of a linear relationship between y(i) and x(i) including slope, intercept, error, and noisiness of the model/natural variation of data around that line. 
+  So after fitting parameters we would see P(this linear relationship | data) where "this linear relationship" is a choice of alpha, Beta, sigma.
+
+# Question 9 (15 points)  
+```{r}
+# Import rethinking package
+library(rethinking)
+
+# Load the Howell data
+data("Howell1")
+
+# Look what is inside
+str(Howell1)
+head(Howell1)
+
+# Filter out adults
+kids <- Howell1[Howell1$age < 18,]
+str(kids)
+head(kids)
+
+# center around mean weight
+kids$weight_centered <- kids$weight - mean(kids$weight)
+str(kids)
+head(kids)
+```
+  
+## 9A.  
+*Fit a linear regression to predict “height”  from “weight_centered” using the lm function.  Call this “heights_lm” and output your model summary.  Write a brief response to the following question:  For every one unit increase in weight, how much taller does the model predict a child gets?  (5 points)*  
+
+```{r}
+heights_lm <- lm(kids$height ~ kids$weight_centered, data = kids)
+summary(heights_lm) 
+```
+
+  
+## 9B.  
+*Fit a linear regression to predict “height” from “weight_centered” using quap. Call this model “heights_quap”. Output the estimates from the model.  Write a brief response to the following question: Do your estimates match what you get from lm?  (5 points)*  
+  
+```{r}
+# So we want to test models of how height relates to (centered) weight
+# To do so we want to sample these models (linear equations) from a normal dist
+heights_quap <- quap(alist(
+                            # Provide a skeleton of a model saying that we will predict height
+                            #  from a normal dist of mean = mu and std = sigma
+                            height ~ dnorm(mu, sigma), 
+
+                            # Now we need to specify mu and and sigma
+                            # ---------------------------------------
+                            # Specify mu to be a degree one polynomial with
+                            #   x_0 + x_1 * weight_centered with x_0, x_1 as coefficients
+                            # In essence we test over degree one polynomials with x_0 and x_1
+                            # having their own distributions we need to specify
+                            mu <- x_0 + x_1 * weight_centered,  
+
+                            # Interpretation of x_0 is the expected height given mean weight
+                            # Thus I will choose mean = average height and some reasonable guess about variance
+                            #   because i don't want to double count the data and give smaller CIs.
+                            # I may be wrong but if I used std = standard error of height then
+                            #   I would have a much stronger dependence between prior and data that is not being accounted for in this model,
+                            #   thus double counting the data and leading to artificially small CIs? Is this wrong? 
+                            
+                            # I have no real guess for this, so I am allowing 8 inches of uncertainty as 1 std
+                            x_0 ~ dnorm(mean(kids$height), 20.32), # Prior I chose myself
+                            # x_0 ~ dnorm(100, 100),                  # Very weak prior
+                            # x_0 ~ dnorm(80, 1), # Very strong/inconsistent prior
+
+                            # This is the the slope relating height to centered weight (up to translation via x_0)
+                            # I will similarly allow the mean to be drawn from data via a normalized covariance
+                            # and will similarly guess how much taller u are on average based on one extra kg.
+                            # In general I am just operating under the idea of using the data to get reasonable ideas 
+                            # about where the data might be centered, but allowing large variance so as not
+                            #  to overly constrain the priors
+                            x_1 ~ dnorm(cov(kids$weight, kids$height) / var(kids$weight), 2), # Prior I chose myself
+                            # x_1 ~ dnorm(0, 10),                                                 # Very weak prior
+                            # x_1 ~ dnorm(0, 0.05),                                             # Very strong/inconsistent prior
+
+                            # Now we can estimate the sigma value
+                            # Can interpret this as standard deviation of heights around the regression line
+                            # So estimating height as "height = contribution from weight + noise/other factors"
+                            # and this sigma is noise/contribution from other factors. We can use this to estimate
+                            # variance explained I would imagine?
+                            # Since std is positive and unbounded let's use  
+                            sigma ~ dexp(1)    # Prior I chose myself
+                            # sigma ~ dexp(0.01)  # Very weak prior
+                            #sigma ~ dexp(1)    # Very strong/inconsistent prior
+                        ), data = kids)
+summary(heights_lm)
+summary(heights_quap)
+```
+  
+
+
+## 9C.  
+*How much do you have to change your priors in the quap model to get different results from lm?  Try different sets of priors and describe what you notice with these changes. (5 points)*  
+When I used very weak priors, the quap estimates were largely identical to the lm results (e.g. both quap and lm slopes were 2.72 with very similar uncertainty). The intercept and sigma values were also nearly the same. This shows that when priors are very loose the data does the talking the Bayesian model behaves like a frequentist model.
+With my own priors, which made some assumptions and incorporated some data from the dataset in the priors, the results also remained very close to lm with the slope (2.72) and intercept (108.32) were nearly unchanged, and only sigma differed slightly. This makes me think that somewhat informative priors do not strongly influence the results when there is a enough data.
+However, this pattern did not continue when I used very strong and conflicting priors. The slope estimate dropped to about 0.10 instead of 2.72, and the intercept shifted to about 84.5 instead of 108.3 and the sigma increased to about 31.9 which suggests a worse fit. The priors were strong enough to override the information in the data and force the model toward unrealistic values.
+My conclusion is that it is important to have a sense of what your data is and what you would reasonably expect OR use uninformative priors. If you apply strong AND inaccurate/unrealistic priors then the unrealistic priors will have more influence on the outcome than the data itself.
+
+```{r}
+```
+  
+
+  
+# Question 10 (27 points)  
+```{r}
+# Read in the stroop data
+Stroop_Data <- read.csv("stroop_dataset_HW1.csv")
+
+ggplot(Stroop_Data, aes(x=as.factor(subject_num), y=RT, fill=as.factor(Condition))) + 
+    geom_boxplot() +
+  scale_fill_discrete(name = "Condition", labels = c("Incongruent", "Congruent")) +
+  xlab("Subject Number") +
+  ylab("RT (ms)")
+```
+  
+## 10A.  
+*Check the balance of the Stroop Dataset using the table() function.  Are there equal numbers of data points in each combination of “Condition” and “young_or_old” levels? (2 points)*  
+```{r}
+table(Stroop_Data$Condition, Stroop_Data$young_or_old)
+
+# Condition: It appears there are 4300 data points in both conditions so it is evenly distributed
+# young_or_old: There is 5200 in one group and 3400 in the other group so there is an imbalance
+# In summary we see cells (0,0) and (1,0) have 2600 data points and cells (0, 1) and (1, 1) have 1700 data points
+#   so this design is imbalanced
+```
+  
+## 10B.  
+Fit a Type III ANOVA (hint: the Anova() function in the ‘car’ package can handle different types) that has:  
+- reaction time (“RT”) as your dependent variable  
+- main effects of “Condition” and “young_or_old”  
+- an interaction effect of “Condition” x  “young_or_old”  
+  
+Call this model “anova_freq_fixed” and output its ANOVA table. (2 points)  
+```{r}
+# Anova answers whether variable X explains variance whilst summary() gives u coefficients about magnitude and direction of the effect
+
+
+# Point in this part is that ANova() will give an answer to the question "does {this variable} matter/have an effect?"
+#   whereas the summary(lm) is going to give you a more fine grained view and let you know which factors and which interactions are significant
+library(car)
+
+# Set contrasts so factors use sum-to-zero coding and make it so effects are interpreted relative to the overall mean rather than a reference group
+options(contrasts = c("contr.sum", "contr.poly"))
+
+# Set the Condition and young or old as factors
+Stroop_Data$Condition <- as.factor(Stroop_Data$Condition)
+Stroop_Data$young_or_old <- as.factor(Stroop_Data$young_or_old)
+
+# Relate rt to condition and young vs old for stroop data via lm
+anova_freq_fixed <- lm(RT ~ Condition * young_or_old, data = Stroop_Data)
+
+# Generate Anova from linear model
+Anova(anova_freq_fixed, type = 3)
+```
+  
+## 10C.  
+*Compute the effects for each factor, as well as the interaction. Call these values “condition_effect”, “age_effect”, and “interaction_effect” and output the values. (2 points)*  
+```{r}
+
+# Results in mean RT for each condition level and difference of condition means (ignores age) 
+# with posive value for codition effect meaning conditiion 1 has longer RT and negative is opposite
+condition_means <- tapply(Stroop_Data$RT, Stroop_Data$Condition, mean)
+condition_effect <- condition_means[2] - condition_means[1]
+
+# effect of age on rt computed as difference of means with same interpretation as above
+age_means <- tapply(Stroop_Data$RT, Stroop_Data$young_or_old, mean)
+age_effect <- age_means[2] - age_means[1]
+
+# get full condition table
+means_table <- with(Stroop_Data, tapply(RT, list(Condition, young_or_old), mean))
+
+# Calculate interaction effect as (age difference in condition 0) - (age difference in condition 1)
+interaction_effect <- (means_table[1,1] - means_table[1,2]) -
+                      (means_table[2,1] - means_table[2,2])
+
+
+# print results
+condition_effect
+age_effect
+interaction_effect
+```
+
+  
+## 10D.  
+*Fit a linear regression model using lm() to predict reaction time (“RT”) with condition (“Condition”), age (“young_or_old”), and an interaction of condition and age.  Call this model “linear_reg_freq_fixed” and output a summary.  (3 points)*  
+```{r}
+# Fit linearmodel with main effects + interaction
+linear_reg_freq_fixed <- lm(RT ~ Condition * young_or_old, data = Stroop_Data)
+
+# Output summary
+summary(linear_reg_freq_fixed)
+```
+  
+## 10E.  
+We’ll explore the linear algebra-based calculations that underlie a linear regression. First, create a matrix called “X” that contains the following columns. Output the first 6 rows of the matrix. (2 points)  
+- “Condition” from your Stroop data  
+- “young_or_old” from your Stroop data  
+- a calculated interaction column (think: multiplication) of “Condition” and “young_or_old”  
+- an “intercept” column (repeating “1” for the length of your data frame)  
+  
+```{r}
+# Code predictors as -1 and 1
+condition_column <- ifelse(Stroop_Data$Condition == levels(Stroop_Data$Condition)[1], -1, 1)
+age_column <- ifelse(Stroop_Data$young_or_old == levels(Stroop_Data$young_or_old)[1], -1, 1)
+
+# Interaction term
+interaction_column <- condition_column * age_column
+
+# Intercept column (given an intercept col of value = x wed have to scale by 1/x to get the intercept... so we set to 1)
+intercept_column <- rep(1, nrow(Stroop_Data))
+
+# Create design matrix X
+X <- cbind(condition_column, age_column, interaction_column, intercept_column)
+
+# Show first 6 rows
+head(X)
+```
+  
+## 10F.  
+*Next, create a vector (a list) “y” that contains the RTs from your Stroop dataset. Output the contents of “y”. (2 points)*  
+```{r}
+y <- Stroop_Data$RT
+head(y)
+```
+  
+## 10G.  
+*Use the Moore-Penrose pseudoinverse to return the coefficients (save them in a variable called “beta_hat”) of your regression calculation. Output these coefficients. (5 points)*  
+```{r}
+library(MASS)
+beta_hat <- ginv(t(X) %*% X) %*% t(X) %*% y
+beta_hat 
+```
+  
+## 10H.  
+*Using the same DV and IVs as the linear regressions in Parts C and D, fit a linear regression using quap. Set your seed to 2026 before fitting the model. Call this “linear_reg_bayes_rethink_fixed_quap” and output a summary. (5 points)*  
+```{r}
+library(rethinking)
+
+# Set seed
+set.seed(2026)
+
+# This homework sooo long jsut do the thing from the eralier problem
+# I picked the priors bc idk anything so i choose very large priors so i worry less about my tired bias
+linear_reg_bayes_rethink_fixed_quap <- quap(
+  alist(
+    RT ~ dnorm(mu, sigma),
+    mu <- a + (bC * condition_column) + (bA * age_column) + (bI * interaction_column),
+    a     ~ dnorm(440, 100),
+    bC    ~ dnorm(0, 50),
+    bA    ~ dnorm(0, 50),
+    bI    ~ dnorm(0, 20),
+    sigma ~ dexp(1/100)
+  ),
+  data = list(
+    RT                 = Stroop_Data$RT,
+    condition_column   = condition_column,
+    age_column         = age_column,
+    interaction_column = interaction_column
+  )
+)
+
+# Output summary
+summary(linear_reg_bayes_rethink_fixed_quap)
+```
+  
+## 10I.  
+*How do the results compare between the frequentist approach and the Bayesian approach? (2 points) Please justify the priors you chose for the Bayesian approach and explain how they might lead to more similar or more different results compared to the frequentist approach. (2 points)* 
+
+The frequentist and bayesin estimates were very similar for the condition and age effects and both showed little/no interaction. This makes sense because the sample size is large and the priors were weakly informative relative to the scale of the RT data.
+
+I used a prior on the intercept centered around the general RT range, broad priors on the condition and age coefficients, a somewhat tighter prior on the interaction since that effect looksmaller, and a broad positive prior on sigma so the model could actually capture the amount of variability in RT. used a ~ Normal(440, 100), bC ~ Normal(0, 50), bA ~ Normal(0, 50), bI ~ Normal(0, 20), and sigma ~ Exponential(1/100). These are still weak enough that the data is mostly doing the work, which is why the Bayesian estimates ended up very close to the lm estimates. If I used much stronger priors or priors centered in unrealistic places then the Bayesian estimates would get pulled farther away from the frequentist ones.
+
+# Question 11 (15 points)  
+*Thinking about your research, please identify a research question of interest and answer the following. Please justify all of your choices [using logic and/or literature].*  
+
+
+## 11A.  
+*Write out your research question. (3 points)*  
+In a modified gosselin schyn's task designed to be adaptable to the auditory domain, to what extent do subjects' internal categorization schemes for white noise stimuli align with the our (experimenter) imposed target/distractor classification, and can we identify consistent spectral features of the auditory stimuli that drive individual subjects' decisions?
+  
+## 11B.  
+*What parameters are you trying to estimate from your data? (3 points)*  
+we want to estimate per-subject spectral weight vector w_s (logistic regression weights over frequency bins meant to predict a given subject's yes/no responses), and an alignment parameter 0_s. 0_s = cosine similarity between w_s and the ground truth weight vector w_true (where the "ground truth" can be interpretted as a "perfect observer" or "observer that adheres perfectly to our (experimenter) defined optimal classification scheme"). We are also estimating withinsubject response consistenct via split-half reliability so that we can distinguish systematic responding from noise (guesses).
+  
+## 11C.  
+*How many parameters does your model have? (3 points)*  
+I don't know how many frequency bins I will use but let's assume K frequency bins from the FFT representation (still deciding how exactly to determine K... whether to go whole hog and have some penalty or do some conservative restriction to frequency bands that are theoretically relevant to auditory processing). Then each subject has K weights (spectral response sensitivity) plus a bias term (does the subject just respond "yes" or "no" as a baseline), so K + 1 parameters per subject.Once we move to comparing the swithin-subject values across subjects, then letting number of subjects = S we get S * (k + 1) total regression parameters plus S alignment parameters . Overall, this gives 2 main parameters per subject: alignment (0_s) and within subject consistency (p_s) plus a group level mean and variance for alignment and consistency, so 2S + 4 in a hierarchical model.
+  
+## 11D.  
+*Write out your research question (or a simplified version of it) in Bayesian form. (3 points)*  
+0_s ~ Normal(mu_0, std_0) — This is each subject's alignment and is drawn from a group-level distribution
+mu_0 ~ Normal(0, 1) — group mean alignment with experimenter defined categorization scheme. Centered at 0 (no alignment) under the null hypothesis 
+std_0 ~ Probably will use HalfCauchy(0, 0.5): THis si meant to represent between-subject variability in alignment
+Per trial: y_si ~ Bernoulli(inverse_logit(w_s · x_i + b_s)), where x_i is the spectral representation of stimulus i where x_i is the observed data and b_s is bias from 11c
+As a posterior we want to calculate P(mu_0 | data). This asks whether the the group mean alignment is different from zero. A secondary question is whether std_0 is large which would indicate meaningful individual differences in sensitivity amd then see if individual alignment can predict some commonly used questionnaires in this area.
+  
+## 11E.  
+*How do you think your parameters are distributed? (3 points)*  
+0_s (alignment) should be centered near zero under the null because cosine similarity between random vectors in n-dimensional space should tend to 0 as n goes to infinity. I am choosing a Normal(0,1) prior since alignment can be positive or negative and I want to capture aligned, not aligned, and aligned in the wrong direction because it represents an outstanding question that we are examining. If subjects genuinely detect the target/distractor distinction then we'd expect a rightward shift in the posterior of mu0. std_θ (tentatively) gets a HalfCauchy prior because between subject variability is strictly positive and we want to allow for the possibility that a subset of subjects are sensitive while others are not (thus the heavy-tail).
+
+ 
